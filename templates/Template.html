@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HPB DIT - {{ TITLE|safe }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+    <!-- main css -->
+    <link rel="stylesheet" href="../static/css/Main.css"/>
+    <link rel="stylesheet" href="../static/css/Base.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
+    <script charset="utf-8" type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <!-- plugins -->
+    <script src="../static/plugins/bs-custom-file-input.min.js"></script>
+</head>
+
+<body>
+    <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center" style="width:100%; height:100%; position:fixed;">
+      <!-- Then put toasts within -->
+      <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-autohide="false">
+        <div class="toast-header">
+          <img src="..." class="rounded mr-2" alt="...">
+          <strong class="mr-auto">Uploading...</strong>
+          <small>Now</small>
+          <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="toast-body d-flex justify-content-center align-items-center">
+            <div class="spinner-border text-secondary" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+      </div>
+    </div>
+
+
+    <ul class="nav-left-container">
+        <nav class="navbar navbar-dark bg-dark" style="padding:0.35rem">
+          <div class="container-fluid">
+            <a class="navbar-brand logo" href="#"/>
+            <img src="../static/Pic/Logo_black.png" alt="" width="55" height="44"/>
+            <p>DIT-PANEL</p>
+            </a>
+          </div>
+        </nav>
+      <li style="list-style: none">
+      </li>
+      <li>
+        <a href="#">
+          <span>Home</span>
+        </a>
+        <ul class="nav-left-container-small">
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">My Dashboard</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">My Templates</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+        </ul>
+      </li>
+      <li style="list-style: none">
+      </li>
+      <li>
+        <a href="#">
+          <span>Universal Data Processing</span>
+        </a>
+        <ul class="nav-left-container-small">
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">Data Extraction</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">Keyword Analysis</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">External Data Management</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+        </ul>
+      </li>
+      <li style="list-style: none">
+      </li>
+      <li>
+        <a href="#">
+          <span>DIT Toolkits</span>
+        </a>
+        <ul class="nav-left-container-small">
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">Main Panel</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">Settings</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+        </ul>
+      </li>
+      <li style="list-style: none">
+      </li>
+      <li>
+        <a href="#">
+          <span>Outer Links</span>
+        </a>
+        <ul class="nav-left-container-small">
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">Data Sources</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">Wiki</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+        </ul>
+      </li>
+      <li style="list-style: none">
+      </li>
+      <li>
+        <a href="#">
+          <span>Contact</span>
+        </a>
+      </li>
+      <li style="list-style: none">
+      </li>
+    </ul>
+    <div class="content">
+        {% if GLOBAL_VARIABLES["DATA_LOADED"] != True %}
+        <!-- UPLOADING PANEL -->
+        <form action="dp" method="post" enctype="multipart/form-data" id="upload">
+        <div class="input-group mb-3 intro">
+          <div class="custom-file">
+            <input type="file" class="custom-file-input" id="inputGroupFile02" accept=".xlsx, .xls, .xlsm, .csv" name="file" />
+            <label class="custom-file-label" for="inputGroupFile02" aria-describedby="inputGroupFileAddon02">
+            upload .xlsx data here
+            </label>
+          </div>
+          <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="button" 
+            id="inputGroupFileAddon04" onclick=formSubmit(); style="font-size:0.5rem;">Load</button>
+          </div>
+        </div>
+        </form>
+        {% endif %}
+    
+        {% for warn in GLOBAL_VARIABLES['WARNING'] %}
+        <!-- WARNING -->
+        <div class="alert alert-danger error col-lg-9" role="alert">
+            {{ warn|safe }}
+        </div>
+        {% endfor %}
+        
+        
+        <!-- HEADER -->
+        <div class="alert alert-dark error col-lg-9" role="alert">
+        {% if 'DATA_NAME' in GLOBAL_VARIABLES %}
+            Loaded Data: {{ GLOBAL_VARIABLES['DATA_NAME']|safe }}
+        {% else %}
+            Please Upload Your Data 
+        {% endif %}
+        </div>
+  
+        
+        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
+        <!-- FUNCTION SELECTION TOOLS - KEY PANEL -->
+        <div class="input-group mb-3 intro">
+          <div class="input-group-prepend">
+            <label class="input-group-text" for="inputGroupSelect01">Function</label>
+          </div>
+          <select class="custom-select" id="funcSelector">
+            <option selected>Select A Method...</option>
+            {% for func in GLOBAL_VARIABLES['FUNCTION_AVAILABLE'] %}
+            <option value="FUNC{{loop.index}}">{{ func['name'] }}</option>
+            {% endfor %}
+          </select>
+          {{ GLOBAL_VARIABLES['RENDER_FUNCTIONS'] }}
+        </div>
+        {% endif %}
+        
+        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
+        <!-- UNIVERSAL TOOLS -->
+        <div class="Universal-Tools">
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-plus-square"><span class="icon-text">Append</span></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-plus-square-fill"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-plus-square-fill"></i>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% for widget in OUTPUT_RESULT %}
+        <!-- VISUALIZATION -->
+            <div class="DITWidget">
+            <div class="DITWidget-Title">
+                <b contenteditable="true">■ {{loop.index}}. {{widget['title']}} </b>
+            </div>
+                <!-- Main Content Here -->
+                {{widget['html'][0]}}
+                {{widget['html'][1]}}
+            
+            <div class="DITWidget-Tools btn-group">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-dash-circle"><span class="icon-text">Delete</span> </i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-download"><span class="icon-text">Download</span></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-question-circle">  <span class="icon-text">Func Info</span></i>
+            </button>
+            </div>
+            </div>
+        {% endfor %}
+        
+        <div id="EndOfAll"></div>
+        
+    </div>
+
+    <script>
+        $('.nav-left-container').on('click','li',function(){
+        $(this).find('.glyphicon-menu-right').removeClass('glyphicon-menu-right').addClass('glyphicon-menu-down');
+        $(this).addClass('active').children('.nav-left-container-small').slideDown()
+        
+        $(this).siblings().removeClass('active').children('.nav-left-container-small').slideUp()
+        $(this).siblings().find('.glyphicon-menu-down').removeClass('glyphicon-menu-down').addClass('glyphicon-menu-right');
+        })
+        
+        $(document).ready(function () {
+          bsCustomFileInput.init()
+        })
+        
+        function formSubmit() {
+            $('.toast').toast('show')
+            document.getElementById("upload").submit()
+        }
+        
+        function hideAllFunc(){
+            {% for func in GLOBAL_VARIABLES['FUNCTION_AVAILABLE'] %}
+            $('#FUNC{{loop.index}}').hide();
+            {% endfor %}
+        }
+        
+        $("#funcSelector").change(function(){
+            hideAllFunc();
+            funcId = "#" + $("#funcSelector").val()
+            $(funcId).show();
+        }
+        )
+        
+    </script>
+</body>
+
+</html>
