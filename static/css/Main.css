@@ -18,8 +18,9 @@ td,th {
 
 table caption{
     font: italic 85%/1 arial,sans-serif;
-    padding: 1em 0;
-    text-align: center;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size:0.4rem;
 }
 
 table thead{
@@ -37,11 +38,10 @@ body
 .nav-left-container {
     background: rgba(15,18,22,0.95);
     position: fixed;
-
     left: 0;
     top: 0;
     width: 8rem;
-
+    z-index:80;
     height: 100%;
     transition: background-color 0.5s;
     
@@ -84,8 +84,9 @@ body
 
 .content{
     position: relative;
-    left:8rem;
+    padding-left:8rem;
     overflow:auto;
+    padding-bottom:1rem;
 }
 
 .content-flow{
@@ -150,7 +151,7 @@ body
   border-radius: 2px;
   color: rgba(45,45,45,1);
   text-align: center;
-  background: rgba(249,249,249,0.7);
+  background: rgba(255,255,255);
   -webkit-box-shadow: 0 0 5px 1px rgba(0,0,0,0.4) ;
   box-shadow: 0 0 5px 1px rgba(0,0,0,0.4) ;
   margin:10px;
@@ -158,6 +159,8 @@ body
   margin-right:0;
   position:relative;
   font-size:1em;
+  overflow:auto;
+  resize:both;
 }
 
 .DITWidget-Tools{
@@ -172,8 +175,9 @@ body
 }
 
 .btn{
-    padding:8px;
-    line-height:5px;
+    padding:0.3rem;
+    line-height:0.5rem;
+    font-size:0.5rem !important;
 }
 
 .bi{
@@ -191,4 +195,119 @@ body
 
 .toast{
     font-size:0.5rem !important;
+}
+
+.func-input-list{
+    margin-top:0.2rem !important;
+    margin-bottom: 0.2rem !important;
+
+}
+
+.parameters{
+    width:100%;
+}
+
+.parameters>input, .parameters>select, .parameters>textarea{
+    font-size:0.5rem;
+}
+
+.popover{
+    font-size:0.5rem;
+}
+
+.func-title{
+    border-left: 10px SlateGray solid;
+    padding-left: 0.5rem;
+    margin-left: 0.3rem;
+    margin-bottom:0;
+}
+
+.func-title-info{
+    border-left: 10px MintCream solid;
+    padding-left: 0.5rem;
+    margin-left: 0.3rem;
+}
+
+.spinner-border{
+    width:1rem !important;
+    height:1rem !important;
+    margin-right:0.5rem !important;
+}
+
+.checks{
+    padding-left:1rem;
+
+}
+
+
+.border-lable-flt {
+  display: block;
+  position: relative;
+}
+.border-lable-flt label, .border-lable-flt > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  cursor: text;
+  font-size: 75%;
+  opacity: 1;
+  -webkit-transition: all .2s;
+          transition: all .2s;
+  top: -.5em;
+  left: 0.75rem;
+  z-index: 3;
+  line-height: 1;
+  padding: 0 1px;
+}
+.border-lable-flt label::after, .border-lable-flt > span::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  background: white;
+  height: 2px;
+  top: 50%;
+  left: -.2em;
+  right: -.2em;
+  z-index: -1;
+}
+.border-lable-flt .form-control::-webkit-input-placeholder {
+  opacity: 1;
+  -webkit-transition: all .2s;
+          transition: all .2s;
+}
+.border-lable-flt .form-control:placeholder-shown:not(:focus)::-webkit-input-placeholder {
+  opacity: 0;
+}
+.border-lable-flt .form-control:placeholder-shown:not(:focus) + * {
+  font-size: 150%;
+  opacity: .5;
+  top: .3em;
+}
+
+.input-group .border-lable-flt {
+  display: table-cell;
+}
+.input-group .border-lable-flt .form-control {
+  border-radius: 0.25rem;
+}
+.input-group .border-lable-flt:not(:last-child), .input-group .border-lable-flt:not(:last-child) .form-control {
+  border-bottom-right-radius: 0;
+  border-top-right-radius: 0;
+  border-right: 0;
+}
+.input-group .border-lable-flt:not(:first-child), .input-group .border-lable-flt:not(:first-child) .form-control {
+  border-bottom-left-radius: 0;
+  border-top-left-radius: 0;
+}
+
+.input-group-append{margin-left:0;}
+
+.form-group{margin-bottom:0;}
+
+label{
+    margin-bottom:0.25rem;
+}
+
+.custom-select{
+    font-size:0.5rem;
 }

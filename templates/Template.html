@@ -4,45 +4,54 @@
     <meta charset="UTF-8">
     <title>HPB DIT - {{ TITLE|safe }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-
+    <!-- ../../ -->
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="../../static/css/bootstrap.min.css"/>
     <!-- main css -->
-    <link rel="stylesheet" href="../static/css/Main.css"/>
-    <link rel="stylesheet" href="../static/css/Base.css"/>
+    <link rel="stylesheet" href="../../static/css/Main.css"/>
+    <link rel="stylesheet" href="../../static/css/Base.css"/>
+    <script src="../../static/plugins/popper.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
     <script charset="utf-8" type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../../static/js/bootstrap.bundle.min.js"></script>
     <!-- plugins -->
-    <script src="../static/plugins/bs-custom-file-input.min.js"></script>
+    <script src="../../static/plugins/bs-custom-file-input.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js"
+            crossorigin="anonymous"></script>
 </head>
 
 <body>
-    <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center" style="width:100%; height:100%; position:fixed;">
-      <!-- Then put toasts within -->
-      <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-autohide="false">
-        <div class="toast-header">
-          <img src="..." class="rounded mr-2" alt="...">
-          <strong class="mr-auto">Uploading...</strong>
-          <small>Now</small>
-          <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="toast-body d-flex justify-content-center align-items-center">
-            <div class="spinner-border text-secondary" role="status">
-              <span class="sr-only">Loading...</span>
+    {% if GLOBAL_VARIABLES["DATA_LOADED"] != True %}
+        <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center" style="width:100%; height:100%; position:fixed;">
+          <!-- Then put toasts within -->
+          <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-autohide="false">
+            <div class="toast-header">
+              <i class="bi bi-arrow-up-square-fill"></i>
+              <strong class="mr-auto" style="font-size:0.5rem;">Reading...</strong>
+              <small>now</small>
+              <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
+            <div class="toast-body d-flex justify-content-center align-items-center">
+                <div class="spinner-border text-secondary" role="status">
+                  <span class="sr-only">Loading...</span>
+                </div>
+                <p style="font-size:0.3rem;">Reading Data, Please Wait...</p> 
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-
+    {% endif %}
 
     <ul class="nav-left-container">
         <nav class="navbar navbar-dark bg-dark" style="padding:0.35rem">
           <div class="container-fluid">
             <a class="navbar-brand logo" href="#"/>
-            <img src="../static/Pic/Logo_black.png" alt="" width="55" height="44"/>
+            <img src="../../static/Pic/Logo_black.png" alt="" width="55" height="44"/>
             <p>DIT-PANEL</p>
             </a>
           </div>
@@ -147,77 +156,123 @@
       </li>
     </ul>
     <div class="content">
-        {% if GLOBAL_VARIABLES["DATA_LOADED"] != True %}
-        <!-- UPLOADING PANEL -->
-        <form action="dp" method="post" enctype="multipart/form-data" id="upload">
-        <div class="input-group mb-3 intro">
-          <div class="custom-file">
-            <input type="file" class="custom-file-input" id="inputGroupFile02" accept=".xlsx, .xls, .xlsm, .csv" name="file" />
-            <label class="custom-file-label" for="inputGroupFile02" aria-describedby="inputGroupFileAddon02">
-            upload .xlsx data here
-            </label>
-          </div>
-          <div class="input-group-append">
-            <button class="btn btn-outline-secondary" type="button" 
-            id="inputGroupFileAddon04" onclick=formSubmit(); style="font-size:0.5rem;">Load</button>
-          </div>
-        </div>
-        </form>
-        {% endif %}
     
         {% for warn in GLOBAL_VARIABLES['WARNING'] %}
-        <!-- WARNING -->
-        <div class="alert alert-danger error col-lg-9" role="alert">
-            {{ warn|safe }}
-        </div>
+            <!-- WARNING -->
+            <div class="alert alert-danger error col-lg-9" role="alert">
+                {{ warn|safe }}
+            </div>
         {% endfor %}
         
         
-        <!-- HEADER -->
-        <div class="alert alert-dark error col-lg-9" role="alert">
+        <!-- HEADER Upload -->
         {% if 'DATA_NAME' in GLOBAL_VARIABLES %}
-            Loaded Data: {{ GLOBAL_VARIABLES['DATA_NAME']|safe }}
-        {% else %}
-            Please Upload Your Data 
-        {% endif %}
+            <div class="alert alert-dark error col-lg-9" role="alert">
+                Loaded Data: {{ GLOBAL_VARIABLES['DATA_NAME']|safe }}
+            {% else %}
+            <div class="alert alert-warning error col-lg-9" role="alert">
+                Please Upload or Choose Your Data
+            {% endif %}
         </div>
-  
         
+        <!-- HEADER Registration -->
         {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
-        <!-- FUNCTION SELECTION TOOLS - KEY PANEL -->
-        <div class="input-group mb-3 intro">
-          <div class="input-group-prepend">
-            <label class="input-group-text" for="inputGroupSelect01">Function</label>
-          </div>
-          <select class="custom-select" id="funcSelector">
-            <option selected>Select A Method...</option>
-            {% for func in GLOBAL_VARIABLES['FUNCTION_AVAILABLE'] %}
-            <option value="FUNC{{loop.index}}">{{ func['name'] }}</option>
-            {% endfor %}
-          </select>
-          {{ GLOBAL_VARIABLES['RENDER_FUNCTIONS'] }}
-        </div>
-        {% endif %}
-        
-        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
-        <!-- UNIVERSAL TOOLS -->
-        <div class="Universal-Tools">
-            <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-plus-square"><span class="icon-text">Append</span></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-plus-square-fill"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-plus-square-fill"></i>
-                </button>
+            {% if GLOBAL_VARIABLES["PHASE"] == 1 %}
+            <div class="alert alert-warning error col-lg-9" role="alert">
+                Please Registrate Your Data to the Data Processor with the method "Data_Processing.Initialize"
+            {% elif GLOBAL_VARIABLES["PHASE"] == 2 %}
+            <div class="alert alert-warning error col-lg-9" role="alert">
+                To Use the Data Analysis Tookits, Please Registrate Your Data with the Method "DA.Initialize" 
+            {% else %}
+            <div class="alert alert-dark error col-lg-9" role="alert">
+                Data Registrated
+            {% endif %}
             </div>
-        </div>
+        {% endif %}
+        
+        {% if GLOBAL_VARIABLES["DATA_LOADED"] != True %}
+            <!-- UPLOADING&CHOOSING PANEL -->
+            <form action="panel-upload/{{username}}/" method="post" enctype="multipart/form-data" id="upload">
+            <div class="input-group mb-3 intro">
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="dataUpload" accept=".xlsx, .xls, .xlsm, .csv" name="file" />
+                <label class="custom-file-label" for="inputGroupFile02" aria-describedby="inputGroupFileAddon02">
+                upload .xlsx data here
+                </label>
+              </div>
+              <div class="input-group-append">
+                <button class="btn btn-outline-secondary" type="button" 
+                id="inputGroupFileAddon04" onclick=formSubmit(); style="font-size:0.5rem;">Load</button>
+              </div>
+            </div>
+            </form>
+            <form action="panel-data/{{username}}/" method="post" id="chooseData">
+            <div class="input-group mb-3 intro">
+              <select class="custom-select" id="selectData" name="filelink">
+                <option selected>Choose Available Data...</option>
+                {% for d in data %}
+                <option value={{data[d][0]+"|"+d}}>{{d}} <small>{{data[d][1]}}</small></option>
+                {% endfor %}
+              </select>
+            <div class="input-group-prepend">
+                <button class="btn btn-outline-secondary" type="button" onclick=chooseDataSubmit();>Choose</button>
+            </div>
+            </form>
+            </div>
+        {% endif %}
+        
+        
+        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
+            <!-- FUNCTION SELECTION TOOLS - KEY PANEL -->
+            
+                <div class="input-group mb-3 intro" stype="margin-top:0">
+                  <div class="input-group-prepend">
+                    <label class="input-group-text" for="inputGroupSelect01">Function</label>
+                  </div>
+                  <select class="custom-select" id="funcSelector">
+                    <option selected>Select A Method...</option>
+                    {% for func in current_func %}
+                        <option value="FUNC{{loop.index}}">{{ func }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                    {% for func in current_func %}
+                    <form method="post" id="FUNC{{loop.index}}" action="panel-func/{{username}}/">
+                        <div class="alert alert-dark error col-lg-9" role="alert">
+                        <p class="h6 func-title">Method: {{func}}</p>
+                        <p class="func-title-info">{{current_func[func]['info']}}</p>
+                        <input type="text" class="form-control" name="func-name" value="{{func}}" form="FUNC{{loop.index}}" style="display:None">
+                        {% set outer_loop = loop %}
+                            {% for name in current_func[func]['parameters'] %}
+                                {{ form_func_input_html(current_func[func]['parameters'], name, loop.index, outer_loop.index) | safe }}
+                            {% endfor %}
+                        <button type="button" class="btn btn-secondary btn-lg btn-block" style="border-radius: .1rem;" onclick={{current_func[func]["type"]}}Method("FUNC{{loop.index}}");>Submit</button>
+                        </div>
+                    </form>
+                    {% endfor %}
+            
+        {% endif %}
+        
+        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
+            <!-- UNIVERSAL TOOLS -->
+            <div class="Universal-Tools">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-plus-square"><span class="icon-text">Append</span></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showDetails();">
+                    <i class="bi bi-plus-square-fill"><span class="icon-text">Show Details</span></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-plus-square-fill"></i>
+                    </button>
+                </div>
+            </div>
         {% endif %}
         
         {% for widget in OUTPUT_RESULT %}
-        <!-- VISUALIZATION -->
+            <!-- VISUALIZATION -->
             <div class="DITWidget">
             <div class="DITWidget-Title">
                 <b contenteditable="true">■ {{loop.index}}. {{widget['title']}} </b>
@@ -240,11 +295,16 @@
             </div>
         {% endfor %}
         
-        <div id="EndOfAll"></div>
+        {{CONTENT|safe}}
+        <div id="endOfAll"></div>
         
     </div>
 
     <script>
+        $(function () {
+          $('[data-toggle="popover"]').popover()
+        });
+    
         $('.nav-left-container').on('click','li',function(){
         $(this).find('.glyphicon-menu-right').removeClass('glyphicon-menu-right').addClass('glyphicon-menu-down');
         $(this).addClass('active').children('.nav-left-container-small').slideDown()
@@ -253,27 +313,146 @@
         $(this).siblings().find('.glyphicon-menu-down').removeClass('glyphicon-menu-down').addClass('glyphicon-menu-right');
         })
         
-        $(document).ready(function () {
+        $(document).ready(function() {
           bsCustomFileInput.init()
         })
         
         function formSubmit() {
-            $('.toast').toast('show')
-            document.getElementById("upload").submit()
+            $('.nav-left-container').css('filter', 'blur(5px)');
+            $('.content').css('filter', 'blur(5px)');
+            $('.toast').toast('show');
+            var fileInput = $('#dataUpload').get(0).files[0];
+            if(fileInput){
+                document.getElementById("upload").submit();
+            }else{
+        		alert("Please Select Your Data");
+        	}
         }
         
         function hideAllFunc(){
-            {% for func in GLOBAL_VARIABLES['FUNCTION_AVAILABLE'] %}
+            {% for func in current_func %}
             $('#FUNC{{loop.index}}').hide();
             {% endfor %}
         }
+        hideAllFunc();
         
         $("#funcSelector").change(function(){
-            hideAllFunc();
-            funcId = "#" + $("#funcSelector").val()
-            $(funcId).show();
-        }
+                if ($("#funcSelector").val() != "Select A Method..."){
+                    hideAllFunc();
+                    funcId = "#" + $("#funcSelector").val();
+                    $(funcId).show();
+                }
+                else{
+                    hideAllFunc();
+                }
+            }
         )
+        
+        function chooseDataSubmit(){
+            if($('#selectData').val() == 'Choose Available Data...'){
+                alert('Please choose a file');
+            } 
+            else{
+            $('.nav-left-container').css('filter', 'blur(5px)');
+            $('.content').css('filter', 'blur(5px)');
+            $('.toast').toast('show');
+            document.getElementById("chooseData").submit();
+            }
+        }
+        
+        function submitMethod(id){
+            hideAllFunc();
+            $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
+            receiveStatus();
+            var form = new FormData(document.getElementById(id));
+            var request = new XMLHttpRequest();
+            request.open("POST", "{{ url_for('use_function', username=username) }}");
+            request.send(form);
+            
+            request.onreadystatechange = function() { 
+                if (request.readyState == 4 && request.status == 200) { 
+                    $('#status').remove();
+                    window.location="{{url_for('render_panel_func', username=username)}}";
+                }
+            };
+        }
+        
+        function ajaxMethod(id){
+            var form = new FormData(document.getElementById(id));
+            hideAllFunc();
+            $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
+            $.ajax({
+                url:"{{ url_for('use_function', username=username) }}",
+                type:"post",
+                data:form,
+                dataType: 'json',
+                processData:false,
+                contentType:false,
+                success:function(arg){ 
+                        receiveStatus();
+                        $('#status').remove();
+                        if(arg.hasOwnProperty("success")){alert(arg["success"])}
+                        if(arg.hasOwnProperty("error")){alert(arg["error"])}
+                        if(arg.hasOwnProperty("script")){eval(arg["script"])}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').prepend($(arg["content"]))}
+                },
+                error:function(e){
+                        $('#status').remove();
+                        alert("Error Occured");
+                }
+            })
+
+        }
+        
+        function receiveStatus(){
+            var get_status = {
+                url:"{{ url_for('sending', username=username) }}",
+                type:"GET",
+                dataType: 'json',
+                success:function(arg){
+                        if (!(arg.includes(">> End")))
+                        {
+                        $('#status').append(arg);
+                        console.log(arg);
+                        $.ajax(get_status);
+                        }
+                        else{
+                        $('#status').append(arg);
+                        $('#status').remove();
+                        }
+                },
+                error:function(e){
+                        $.ajax(get_status);
+                }
+                }
+            var start_getting = $.ajax(get_status);
+        }
+        
+        function deleteElement(btn_id){
+            b = '#' + btn_id;
+            if(["SELECT", "INPUT"].includes($(b).prev().prev().prop('nodeName'))){$(b).prev().remove()}
+        }
+        
+        function showDetails(){
+            hideAllFunc();
+            $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
+            receiveStatus();
+            var formData = new FormData();
+            formData.append("func-name", "DA.show_details");
+            var request = new XMLHttpRequest();
+            request.open("POST", "{{ url_for('use_function', username=username) }}");
+            request.send(formData);
+            
+            request.onreadystatechange = function() { 
+                if (request.readyState == 4 && request.status == 200) { 
+                    $('#status').remove();
+                    window.location="{{url_for('render_panel_func', username=username)}}";
+                }
+            };
+        
+        }
+        
+        {{script|safe}}
         
     </script>
 </body>

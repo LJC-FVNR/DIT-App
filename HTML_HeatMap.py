@@ -1,6 +1,6 @@
 from matplotlib import colors
 from pandas.io.formats.style import Styler
-from pandas.core.indexing import _maybe_numeric_slice, _non_reducing_slice
+from pandas.core.indexing import maybe_numeric_slice, non_reducing_slice
 
 class HStyler(Styler):
     def relative_luminance(self, rgba) -> float:
@@ -29,8 +29,8 @@ class HStyler(Styler):
         if sub is None:
             sub = self.subset
         cmap = self.min_max_scaler(sub).applymap(lambda x: self.get_heatmap_color(x, cmap, text_color_threshold))
-        sub = _maybe_numeric_slice(self.data, sub)
-        sub = _non_reducing_slice(sub)
+        sub = maybe_numeric_slice(self.data, sub)
+        sub = non_reducing_slice(sub)
         c_mapping = lambda x: cmap.loc[sub]
         self.apply(c_mapping, subset=sub, axis=None)
         return self

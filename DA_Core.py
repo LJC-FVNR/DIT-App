@@ -6,15 +6,34 @@ import numpy as np
 import copy
 import pandas as pd
 from HTML_HeatMap import HStyler
+import holoviews as hv
+
 
 
 class PB_Data:
-    def __init__(self, data, identification:list, classification:list, performance:list, 
-                 name='unnamed', is_kw_extracted=False, universal_label="Full Data", time_series=None, **kwargs):
-
+    default_classification = ['reporting_year','reporting_qtr', 'regiond_id',
+               'marketplace_id', 'marketplace', 'asin', 'item_name', 'launch_bucket',
+               'is_deprecated',
+               'wbr_division', 'hdl_classification', 'gl_product_group',
+               'gl_product_group_desc', 'category_code', 'category_desc',
+               'subcategory_code', 'subcategory_desc', 'primary_vendor',
+               'primary_vendor_name', 'preferred_vendor_name', 'preferred_vendor', 'vendor']
+    default_performance = ['ops', 'list_price', 'total_gv', 'product_site_launch_day', 'asin_launch_day',
+               'ordered_units', 'net_ordered_gms', 'on_hand_quantity', 'on_hand_cost',
+               'quantity_shipped', 'contribution_profit_amt', 'revenue_share_amt',
+               'product_cogs_amt', 'net_ppm_amt', 'ppm_amt', 'ship_profit_amt',
+               'sales_discounts_amt', 'product_gms', 'shipping_revenue_amt',
+               'subscription_revenue_amt', 'shipping_cost_amt', 'display_ads_amt',
+               'vendor_profit_amt', 'one_star', 'two_star', 'three_star', 'four_star',
+               'five_star', 'total_reviews', 'total_stars', 'returned_units',
+               'refunded_units', 'refunded_amt', 'andon_count']
+    key_attribute_set = ['ordered_units', 'ASIN', 'item_name', 'vendor_name', 'vendor_code',
+                     'reporting_year', 'marketplace_id', 'marketplace', 'hdl_classification']
+    
+    def __init__(self, processor, classification:list, performance:list, 
+                 name='unnamed', universal_label="Full Data", time_series=None, **kwargs):
         '''
         data: raw data
-        identification: slice of identification columns ('ASIN', 'item_name', 'preferred_vendor')
         classification: slice of classification columns (
                'reporting_year','reporting_qtr', 'regiond_id',
                'marketplace_id', 'marketplace', 'asin', 'item_name', 'launch_bucket',
@@ -36,10 +55,10 @@ class PB_Data:
         name: data name
         **kwargs: positioning the columns of key requirements
         '''
-        self.reset_data = data
-        
+        self.processor = processor
+        data = processor.data
+        self.reset_data = copy.deepcopy(data)
         self.default_cmap = [sns.light_palette("green", as_cmap=True), sns.light_palette("purple", as_cmap=True)]
-        self.is_kw_extracted = is_kw_extracted
         self.attribute = {}
         self.config_currency = ['list_price', 'preferred_vendor_cost', 'ops', 'net_ordered_gms', 'on_hand_cost', 'contribution_profit_amt', 'revenue_share_amt',
                                'product_cogs_amt', 'ship_profit_amt',
@@ -47,9 +66,10 @@ class PB_Data:
                                'subscription_revenue_amt', 'shipping_cost_amt', 'display_ads_amt',
                                'vendor_profit_amt', 'refunded_amt']
         self.set_attribute(kwargs) # self.attribute: key features utilized in search section
-        self.set_label(identification, classification, performance)
+        self.set_label(classification, performance)
         self.set_data(data, universal_label)
         self.set_time(time_series)
+        self.set_category()
         
     def reset(self):
         self.data = self.reset_data
@@ -59,9 +79,10 @@ class PB_Data:
         
     def set_time(self, time_series=None):
         if time_series is None:
-            time_series = ['year','reporting_qtr']
+            time_series = ['reporting_year','reporting_qtr']
         time_series = self.uniform_feature(time_series)
-        self.data['Time'] = eval("+".join([f'data["{i}"].astype("str")' for i in time_series]))
+        self.data['Time_Series'] = eval("+".join([f'self.data["{i}"].astype("str")' for i in time_series]))
+        self.classification.append('Time_Series')
         
     def set_type(self, type_map):
         for column in type_map:
@@ -69,11 +90,16 @@ class PB_Data:
                 self.data[column] = self.data[column].astype(type_map[column])
             except:
                 pass
+            
+    def set_category(self):
+        for c in self.classification:
+            if c not in self.performance:
+                self.data[c] = self.data[c].astype('object')
 
 
     def set_attribute(self, kwargs):
         # initialize key features / uniform attr name
-        self.attribute['year'] = 'reporting_year'
+        # self.attribute['year'] = 'reporting_year'
         self.attribute['ordered_units'] = 'ordered_units'
         self.attribute['ASIN'] = 'asin'
         self.attribute['item_name'] = 'item_name'
@@ -91,83 +117,100 @@ class PB_Data:
         data['records'] = data.iloc[:, 0].map(lambda x: 1)
         self.data = data
         self.data['combinatorial_queries'] = self.data.iloc[:, 0].map(lambda x: '')
-        self.latest_query = data
+        self.classification.append('combinatorial_queries')
+        self.latest_query = copy.deepcopy(data)
         self.universal_label = universal_label
         return self
     
-    def select_data(self, select=[('reporting_year', '==', '2020'), ('reporting_qtr', '==', '1')]):
-        select = []
+    def select_data(self, feature=['reporting_year', 'reporting_qtr'] , operator=['==', '=='], value=['2020', '1'], inheritance=False):
+        left = feature if type(feature) is list else [feature]
+        mid = operator if type(operator) is list else [operator]
+        right = value if type(value) is list else [value]
+        min_len = min([len(left), len(mid), len(right)])
+        left, mid, right = left[0:min_len], mid[0:min_len], right[0:min_len]
+        select = list(zip(left, mid, right))
+        selected = []
         for s in select:
-            select += [f'self.data[{s[0]}]{s[1]}{s[2]}']
-        select = "&".join(select)
-        return self.data[eval(select)]
+            selected += [f'(self.data["{s[0]}"]{s[1]}{s[2]})'] if inheritance==False else [f'(self.latest_query["{s[0]}"]{s[1]}{s[2]})']
+        selected = "&".join(selected)
+        self.latest_query = copy.deepcopy(self.data[eval(selected)]) if inheritance==False else copy.deepcopy(self.latest_query[eval(selected)])
+        return self.latest_query
         
-    def set_label(self, identification, classification, performance):
+    def set_label(self, classification, performance):
         # initialize / manipulate feature labels
-        self.identification = identification
         self.classification = classification
         self.performance = performance
         return self
     
-    def query_by(self, kw_and=None, kw_or=None, kw_not=None, attr=None):
+    def query_by(self, kw_and=None, kw_or=None, kw_not=None, attr=None, inheritance=False):
+        q_data = self.data if inheritance==False else self.latest_query
+        q_data_str = 'self.data' if inheritance==False else 'self.latest_query'
         extract_full = lambda s: re.findall('["](.*?)["]', s)
         extract_single = lambda s: [i for i in re.sub('\\".*?\\"', '', s).split(" ") if i != '']
         # search presents
-        if attr is None or attr == '':
-            attr = self.attribute['item_name']
-        else:
-            attr - self.attribute[attr]
         if kw_and is None or kw_and == '':
-            crit_and = self.data[attr].str.contains('', regex=True)
+            crit_and = q_data[attr].astype('str').str.contains('', regex=True)
         else:
             kw_and_single = extract_single(kw_and)
             kw_and_full = [r'\\b'+i+r'\\b' for i in extract_full(kw_and)]
             kw_and = kw_and_single + kw_and_full
-            form_and = [f"(self.data[attr].str.contains('(?i){iand}', regex=True))" for iand in kw_and]
+            form_and = [f"({q_data_str}[attr].astype('str').str.contains('(?i){iand}', regex=True))" for iand in kw_and]
             crit_and = eval("&".join(form_and))
         if kw_or is None or kw_or == '':
-            crit_or = self.data[attr].str.contains('', regex=True)
+            crit_or = q_data[attr].astype('str').str.contains('', regex=True)
         else:
             kw_or_single = extract_single(kw_or)
             kw_or_full = ['\\b'+i+'\\b' for i in extract_full(kw_or)]
             kw_or = kw_or_single + kw_or_full
             form_or = "|".join([f'(?i){ior}' for ior in kw_or])
-            crit_or = self.data[attr].str.contains(form_or, regex=True)
+            crit_or = q_data[attr].astype('str').str.contains(form_or, regex=True)
         if kw_not is None or kw_not == '':
-            crit_not = self.data[attr].str.contains('', regex=True)
+            crit_not = q_data[attr].astype('str').str.contains('', regex=True)
         else:
             kw_not_single = extract_single(kw_not)
             kw_not_full = ['\\b'+i+'\\b' for i in extract_full(kw_not)]
             kw_not = kw_not_single + kw_not_full
             form_not = "|".join([f'(?i){inot}' for inot in kw_not])
-            crit_not = self.data[attr].str.contains(form_not, regex=True).map(lambda x:not x)
-        self.latest_query = self.data[(crit_and)&(crit_or)&(crit_not)]
+            crit_not = q_data[attr].astype('str').str.contains(form_not, regex=True).map(lambda x:not x)
+        self.latest_query = copy.deepcopy(q_data[(crit_and)&(crit_or)&(crit_not)])
         return self.latest_query
         
-    def regex_query_by(self, reg, attr=None):
+    def regex_query_by(self, reg='', attr=None, inheritance=False):
+        q_data = self.data if inheritance==False else self.latest_query
         # regex search
-        if attr is None:
-            attr = self.attribute['item_name']
-        else:
-            attr - self.attribute[attr]
-        self.latest_query = self.data[(self.data[attr].str.contains(reg, regex=True)==True)]
+        self.latest_query = copy.deepcopy(q_data[(q_data[attr].str.contains(reg, regex=True)==True)])
         return self.latest_query
     
-    def query_equal(self, column, condition):
-        self.latest_query = self.data[self.data[column] == condition]
+    def query_bulk(self, Q_List:str='', attr='', inheritance=False):
+        q_data = self.data if inheritance==False else self.latest_query
+        q = str(Q_List).replace("[", "").replace("]", "")
+        sp = "," if q.count(",") > q.count('\n') else "\n"
+        q = q.split(sp)
+        q = [i.strip() for i in q]
+        self.latest_query = copy.deepcopy(q_data[q_data.apply(lambda x: x[attr] in q, axis=1)])
         return self.latest_query
 
-    def get_cl_set(self, cl:str)->list:
+    def get_cl_set(self, cl:str='', inheritance=False)->list:
+        q_data = self.data if inheritance==False else self.latest_query
         if cl in self.attribute:
             cl = self.attribute[cl]
         try:
-            cl = list(set(self.data[cl].dropna().to_list()))
+            cl = list(set(q_data[cl].dropna().to_list()))
             cl.sort()
             return cl
         except:
             raise(f"Cannot Find {cl} in Data")
-            
-    def combinatorial_query_by(self, query_list, attr=None, show_all=False):
+
+    def combinatorial_query_by(self, kw_and='', kw_or='', kw_not='', attr=None, show_overall=False, inheritance=False):
+        print(kw_and, kw_or, kw_not, attr, show_overall, inheritance)
+        left = kw_and if type(kw_and) is list else [kw_and]
+        mid = kw_or if type(kw_or) is list else [kw_or]
+        right = kw_not if type(kw_not) is list else [kw_not]
+        max_len = max([len(left), len(mid), len(right)])
+        diff = [max_len-len(left), max_len-len(mid), max_len-len(right)]
+        left, mid, right = left+diff[0]*[''], mid+diff[1]*[''], right+diff[2]*[''],
+        query_list = list(zip(left, mid, right))
+        print(query_list)
         '''
         query_list: [[and, or, not], [and, or, not], ...]
         '''
@@ -182,8 +225,8 @@ class PB_Data:
                 q_index = self.query_by(kw_and=ql[0], kw_or=ql[1], kw_not=ql[2], attr=attr).index
                 self.data.loc[:, 'combinatorial_queries'] = self.data.apply(lambda x: x['combinatorial_queries']+query_name if x.name in q_index else x['combinatorial_queries'], axis=1)
         self.latest_query = copy.deepcopy(self.data)
-        if show_all == False:
-            self.latest_query = self.data[self.data['combinatorial_queries'] != '']
+        if show_overall == False:
+            self.latest_query = copy.deepcopy(self.data[self.data['combinatorial_queries'] != ''])
         self.data['combinatorial_queries'] = self.data.iloc[:, 0].map(lambda x: '')
         return self.latest_query
     
@@ -404,7 +447,6 @@ class PB_Data:
                     form += f".background_gradient(cmap=color_map[{color_control}], subset=(ci.index{grand_control}, [{p}]))"
                     color_control = color_on_change(color_control)
             ex += f'{form}'
-        
         return eval(ex)
     
     def feature_summary_dual(self, data=None, index=['vendor_code'], columns=["marketplace"], 
@@ -525,20 +567,22 @@ class PB_Data:
             formatting = '{:.2%}' if brace else ':.2%'
         return formatting
     
-    def draw_feature_distribution_scatter(self, feature:str, performance='product_cogs_amt', data=None):
+    def draw_feature_distribution_scatter(self, feature:str, performance='product_cogs_amt', ddata=None):
         from bokeh.models import ColumnDataSource
         from bokeh.plotting import figure
         from bokeh.transform import jitter
         from bokeh.models import NumeralTickFormatter
         
-        if data is None:
-            data = self.latest_query
+        if ddata is None:
+            ddata = copy.deepcopy(self.latest_query)
         
         feature = self.uniform_feature([feature])[0]
-        
-        source = ColumnDataSource(data)
+        ddata[feature] = ddata[feature].astype('object')
+        ddata = ddata.dropna(how='any', subset=[feature])
+        ddata[feature] = ddata[feature].astype(np.str)
+        source = ColumnDataSource(ddata)
 
-        yr = [i for i in set(data[feature])]
+        yr = [i for i in set(ddata[feature])]
         
         length_feature = len(yr)
 
@@ -554,44 +598,44 @@ class PB_Data:
 
         return p
     
-    def draw_feature_time_seires_heatmap(self, feature:str, time_series=['year','reporting_qtr'], performance='product_cogs_amt', data=None, cmap=None):
-        import holoviews as hv
+    def draw_feature_time_seires_heatmap(self, feature:str, time_series=['Time_Series'], performance='product_cogs_amt', data=None, cmap=["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]):
         from holoviews import opts
         from random import choice
         from bokeh.models import NumeralTickFormatter
         from bokeh.models import HoverTool
         hv.extension('bokeh')
         if data is None:
-            data = self.latest_query
+            data = copy.deepcopy(self.latest_query)
         if cmap is None:
             cmap = choice(self.default_cmap)
         feature = self.uniform_feature([feature])[0]
+        data[feature] = data[feature].astype('object')
+        data = data.dropna(how='any', subset=[feature])
         time_series = self.uniform_feature(time_series)
 
         data = copy.deepcopy(data[time_series+[performance]+[feature]])
         data.replace([np.inf, -np.inf], np.nan, inplace=True)
         data.dropna(inplace=True)
-        data['Time'] = eval("+".join([f'data["{i}"].astype("str")' for i in time_series]))
-        draw = data[['Time', feature, performance]].groupby(by=['Time', feature]).agg('sum').reset_index()
+        draw = data[['Time_Series', feature, performance]].groupby(by=['Time_Series', feature]).agg('sum').reset_index()
 
         formatting = self.get_format(performance, brace=False)
         formatting_b = self.get_format(performance, brace=True)
         formatter = NumeralTickFormatter(format=formatting)
         hover = HoverTool(tooltips=[(f"{feature}",f"@{feature}"),
-                                    ('Time', '@Time'),
+                                    ('Time_Series', '@Time_Series'),
                                     (f"{performance}", f"@{performance}{formatting_b}")])
-        hover_a = HoverTool(tooltips=[('Time', '@Time'),
+        hover_a = HoverTool(tooltips=[('Time_Series', '@Time_Series'),
                                       (f"{performance}", f"@{performance}{formatting_b}")])
         
         ag = []
         heatmap = hv.HeatMap(draw, label='Total')
-        aggregate = hv.Dataset(heatmap).aggregate('Time', np.sum, np.std)
+        aggregate = hv.Dataset(heatmap).aggregate('Time_Series', np.sum, np.std)
 
         features = list(set(draw[feature]))
         feature_length = len(features)
         for i in range(feature_length):
-            hm_temp = hv.HeatMap(draw[draw[feature] == features[i]], label=features[i])
-            ag += [hv.Dataset(hm_temp).aggregate('Time', np.sum, np.std)]
+            hm_temp = hv.HeatMap(draw[draw[feature] == features[i]], label=str(features[i]))
+            ag += [hv.Dataset(hm_temp).aggregate('Time_Series', np.sum, np.std)]
         
         line = "hv.Curve(aggregate)"+"*"+ "*".join([f'hv.Curve(ag[{i}])' for i in range(feature_length)])
         point = "hv.Scatter(aggregate)"+"*"+ "*".join([f'hv.Scatter(ag[{i}])' for i in range(feature_length)])
@@ -660,3 +704,109 @@ class PB_Data:
             opts.NdOverlay(legend_position='right', show_frame=False, xformatter=xformatter, yformatter=yformatter, 
                            fontsize={'legend':7.5}))
         return hv.render(overlay_scatter)
+    
+    def full_describe(self, fdata=None):
+        d = ''
+        if fdata is None:
+            fdata = self.latest_query
+        try:
+            num = fdata.describe(include=[np.number])
+            num_len = len(num.columns)
+            num_caption = f"Numeric: {num_len} columns"
+            num = num.style.format("{:.2f}").set_caption(num_caption).render()
+            d += num
+        except:pass
+        try:
+            obj = fdata.describe(include=[object])
+            obj_len = len(obj.columns)
+            obj_caption = f"String: {obj_len} columns"
+            obj = obj.style.set_caption(obj_caption).render()
+            d += obj
+        except:pass
+        try:
+            cate = fdata.describe(include=['category']).style
+            cate_len = len(cate.columns)
+            cate_caption = f"Categorical: {cate_len} columns"
+            cate = cate.style.set_caption(cate_caption).render()
+            d += cate
+        except:pass
+        return d
+    
+    def show_details(self, sdata=None):
+        if sdata is None:
+            sdata = self.latest_query
+        d = sdata.head(100).style.render()
+        return d
+    
+    def generate_topic_model(self, word_scale=100, n_topics=10, vis_type='PCA'):
+        from sklearn.decomposition import PCA
+        from sklearn.manifold import TSNE
+        from sklearn.decomposition import NMF
+        import networkx as nx
+        from bokeh.models import HoverTool
+        
+        # get data
+        a, b= self.processor.co_occurence(scale=word_scale)
+        word_set = set([i for i in np.array(a)[:, 0]])
+        count = pd.DataFrame(a)
+        
+        # identify topics and corresponding colors
+        print('\n>> Identifying Topics...')
+        N = n_topics
+        colors = hv.Cycle('Category20').values
+        if N < 20:
+            colors = colors[0:N]
+        else:
+            colors = int(N/20) * colors + colors[0:(N%20)]
+        model = NMF(n_components=N, init='random', random_state=0)
+        X = self.processor.data["BaggingVector"].to_list()
+        W = model.fit_transform(X)
+        H = model.components_
+        self.processor.data['Topic'] = pd.Series(np.argmin(W, axis=1))
+        word_topic = np.argmin(H, axis=0)
+        word_index = [i for i in word_set]
+        
+        # generate position (x,y) of nodes
+        print('\n>> Generating Position of each node...')
+        if vis_type == 'PCA':
+            X = np.array(self.processor.data["BaggingVector"].to_list()).T
+            pca = PCA(n_components=2)
+            pca.fit(X)
+            P = pca.transform(X).T
+        elif vis_type == 'NMF':
+            model = NMF(n_components=2, init='random', random_state=0)
+            X = self.processor.data["BaggingVector"].to_list()
+            W = model.fit_transform(X)
+            P = model.components_
+        elif vis_type == 'tSNE':
+            X = np.array(self.processor.data["BaggingVector"].to_list()).T
+            pca = PCA(n_components=int(X.shape[0]/20))
+            pca.fit(X)
+            P = pca.transform(X)
+            P = TSNE(n_components=2).fit_transform(P).T
+        else:
+            func = eval(vis_type)
+            G = nx.Graph()
+            G.add_weighted_edges_from(b)
+            nodes = pd.DataFrame(func(G), index=['x', 'y']).transpose().reset_index()
+            P = [nodes.x.to_list(), nodes.y.to_list()]
+        
+        # form features of nodes for visualization
+        print('\n>> Generating Visualized Graph...')
+        word_de = pd.DataFrame({'x':P[0], 'y':P[1], 'index':word_index, 'word':word_index, 'topic':word_topic, 'color':[colors[i] for i in word_topic]})
+        nodes = word_de[word_de['word'].isin(word_set)]
+        nodes['counter'] = nodes['word'].map(lambda x: int(count[count[0]==x][1]))
+        nodes['size'] = ((nodes['counter']-nodes['counter'].min())/(nodes['counter'].max()-nodes['counter'].min()))*20 + 20
+        
+        # generathe map
+        edges = b
+        main_graph = hv.Graph((edges, nodes))
+        labels = hv.Labels(main_graph.nodes.data, ['x', 'y'], "word")
+        labels.opts(xoffset=0, yoffset=0, text_font_size='9pt', text_alpha=0.7)
+        hover = HoverTool(tooltips=[("word", "@word"), ("counter", "@counter"), ("topic", "@topic")])
+        main_graph.opts(tools=[hover], inspection_policy='nodes', edge_line_alpha=0.01, node_color='color', 
+                        edge_hover_alpha=0.4, node_size='size', node_alpha=0.5, node_line_alpha=0.2, active_tools=['wheel_zoom'])
+        fig = main_graph * labels
+        fig.opts(width=1000, height=1000)
+        return hv.render(fig)
+                

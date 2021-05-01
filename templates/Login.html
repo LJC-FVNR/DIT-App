@@ -16,6 +16,25 @@
 
 <body>
     <script src="{{url_for('static', filename='js/bootstrap.bundle.min.js')}}"></script>
+    <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center" id="login-main" style="width:100%; height:100%; position:fixed; font-siez:0.5rem;">
+      <!-- Then put toasts within -->
+      <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-autohide="false" style="z-index:20">
+        <div class="toast-header">
+          <i class="bi bi-arrow-up-square-fill" style="padding-right:0.15rem;"></i>
+          <strong class="mr-auto" style="font-size:0.5rem;">Login</strong>
+          <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+          </button>
+        </div>
+        <div class="toast-body d-flex justify-content-center align-items-center">
+                <div class="d-flex justify-content-center align-items-center">
+                <form id="user_login" action="panel-file" method="post">
+                  <input type="text" class="form-control" placeholder="username" aria-label="username" aria-describedby="button-addon2" id="username" name="username">
+                  <button class="btn btn-outline-secondary userbtn" type="button" id="ubtn" onclick=userSubmit(); style="width:100%;">Login</button>
+                </form>
+                </div>
+        </div>
+      </div>
+    </div>
     <nav class="navbar navbar-dark bg-dark" style="padding:0.1rem">
       <div class="container-fluid">
         <a class="navbar-brand logo" href="#"/>
@@ -24,7 +43,7 @@
         </a>
       </div>
     </nav>
-    <div class="container" style="max-height:None; max-width:None; padding-left:0; padding-right:0;">
+    <div class="container" id="main" style="max-height:None; max-width:None; padding-left:0; padding-right:0;">
         <div id="carouselExampleCaptions" class="carousel carousel-dark slide" data-ride="carousel">
           <ol class="carousel-indicators">
             <li data-target="#carouselExampleCaptions" data-slide-to="0" class="active"></li>
@@ -40,7 +59,7 @@
                     <p>Getting Started to Extract the Key Factors from your Data Based on Natural Language Processing Techniques.</p>
                     <div class="space"></div>
                     <div class="d-grid gap-2 start-main mx-auto">
-                      <button class="btn btn-primary start-btn" type="button" onclick="window.location.href='{{ url_for('data_processing') }}'">Start Now</button>
+                      <button class="btn btn-primary start-btn" type="button" onclick=showLogin();>Start Now</button>
                     </div>
                 </div>
               </div>
@@ -53,7 +72,7 @@
                     <p>Utilizing the Multi-functional Toolkits Prepared for Excellent Exploratory Data Analysis to Research Your Hypotheses</p>
                     <div class="space"></div>
                     <div class="d-grid gap-2 start-main mx-auto">
-                      <button class="btn btn-primary start-btn" type="button" onclick="window.location.href='{{ url_for('data_exploration') }}'">Start Now</button>
+                      <button class="btn btn-primary start-btn" type="button" onclick=showLogin();>Start Now</button>
                     </div>
                   </div>
               </div>
@@ -66,7 +85,7 @@
                     <p>Customize the Functions Provided in Previous Sections </p>
                     <div class="space"></div>
                     <div class="d-grid gap-2 start-main mx-auto">
-                      <button class="btn btn-primary start-btn" type="button" onclick="window.location.href='{{ url_for('setting') }}'">Start Now</button>
+                      <button class="btn btn-primary start-btn" type="button" onclick=showLogin();>Start Now</button>
                     </div>
                   </div>
               </div>
@@ -82,6 +101,21 @@
           </a>
         </div>
     </div>
+    
+    
+    <script>
+        function showLogin(){
+            $('.toast').toast('show')
+            $('#main').css('filter', 'blur(5px)')
+            $('#login-main').css('z-index', '20')
+        }
+        function userSubmit(){
+            if($('#username').val()==''){alert('Please Enter A Login')}
+            else{
+            document.getElementById("user_login").submit()}
+        }
+        
+    </script>
 </body>
 
 </html>
