@@ -391,7 +391,7 @@ def form_func_input_html(parameters, name, index, outer_index):
         pool = eval(input_content)
         options = "".join([f"<option value='{i}'>{i}</option>" for i in pool])
         floating_labels = type_input_parameters
-        fc_len = len(floating_labels)
+        fc_len = len(floating_labels) 
         margin = '0' if fc_len <= 2 else '0.25'
         # change
         floating = """
@@ -452,25 +452,31 @@ def format_result(title, script, div, tools:list):
     global RESULT_INDEX_ID
     div_id = 'result'+str(RESULT_INDEX_ID)
     # title: "t", script, div, tools: ['delete', 'download', 'funcinfo']}
-    delete = f"""
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_{RESULT_INDEX_ID}" onclick="$('#btn_result_{RESULT_INDEX_ID}').parent().parent().remove()">
-               <i class="bi bi-dash-circle"><span class="icon-text">Delete</span> </i>
+    close = f"""
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_close_{RESULT_INDEX_ID}" onclick="$('#btn_result_{RESULT_INDEX_ID}').parent().parent().remove()">
+               <i class="bi bi-x-circle"><span class="icon-text">Close</span> </i>
             </button>
             """ if 'delete' in tools else ""
             
-    download = f"""
-                <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-download"><span class="icon-text">Download</span></i>
+    hide = f"""
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_hide_{RESULT_INDEX_ID}" onclick="$(this).parent().prev().hide()">
+                <i class="bi bi-dash-circle"><span class="icon-text">Hide</span></i>
                 </button>
-            """ if 'download' in tools else ""
+            """ if 'hide' in tools else ""
             
-    funcinfo = f"""
-            <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-question-circle">  <span class="icon-text">Func Info</span></i>
+    show = f"""
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_show_{RESULT_INDEX_ID}"  onclick="$(this).parent().prev().show()">
+                <i class="bi bi-plus-circle">  <span class="icon-text">Show</span></i>
             </button>
-        """ if 'funcinfo' in tools else ""
+        """ if 'show' in tools else ""
+    info = f"""
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_info_{RESULT_INDEX_ID}">
+                <i class="bi bi-info-circle">  <span class="icon-text">Info</span></i>
+            </button>
+        """ if 'info' in tools else ""
+    
     tools=f'''
-            {delete}{download}{funcinfo}
+            {close}{hide}{show}{info}
     '''
     html = f"""
     <div class="DITWidget" id="{div_id}">
@@ -478,8 +484,10 @@ def format_result(title, script, div, tools:list):
                 <b contenteditable="true">■ {title} </b>
         </div>
         <!-- Main Content Here -->
+        <div class="main-content d-flex justify-content-center">
                 {script}
                 {div}
+        </div>
         <div class="DITWidget-Tools btn-group">
             {tools}
         </div>

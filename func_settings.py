@@ -86,7 +86,7 @@ form = \
                                                  "value": ["Values", "", ["text_append", "None"], 5, "Write values"],
                                                  "inheritance": ["Inheritance", "False", ["choose", "False", "True"], 3, "whether to query based on the latest selected data (False) or the overall data (True)"]
                                                 },
-                                  "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);print('>> End')",
+                                  "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
                                            "script":"",
                                            "finish":"jsonify({'content':content})"
                                            }
@@ -101,7 +101,7 @@ form = \
                                      "kw_not": ["Keywords: Not", "", ["text_edible", 'small', 'text'], 4, "None of these keywords should appear"],
                                      "inheritance": ["Inheritance", "False", ["choose", "False", "True"], 3, "whether to query based on the latest selected data (False) or the overall data (True)"]
                                     },
-                      "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);print('>> End')",
+                      "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
                                "script":"",
                                "finish":"jsonify({'content':content})"
                                }
@@ -114,7 +114,7 @@ form = \
                              "Q_List": ["Bulk List", "", ["text_edible", 'large', 'text'], 5, "Use ',' or line breaks to split each element"],
                              "inheritance": ["Inheritance", "False", ["choose", "False", "True"], 3, "whether to query based on the latest selected data (False) or the overall data (True)"]
                             },
-              "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);print('>> End')",
+              "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
@@ -132,7 +132,7 @@ form = \
               "after":{"exec":"""div=pb_data.full_describe() 
                        \ntitle='Data Selected' 
                        \nglobal content
-                       \ncontent=format_result(title, '', div, ['delete', 'download', 'funcinfo']) 
+                       \ncontent=format_result(title, '', div, ['close', 'hide', 'show', 'info']) 
                        \nprint('>> End')
                        \nglobal RELOADED
                        \nglobal script
@@ -159,7 +159,7 @@ form = \
                              "grand_total": ["Show Grand Total", "True", ["choose", "False", "True"], 3, "whether showing grand_total for numerical features"],
                              "color_map": ["Color Map", "['None']", ["choose_eval", "eval"], 1, "Choose a theme of color"]
                             },
-              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);print('>> End')",
+              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
@@ -177,7 +177,7 @@ form = \
                              "color": ["Show Color", "True", ["choose", "False", "True"], 3, "whether to colorize the summary"],
                              "color_map": ["Color Map", "['None']", ["choose_eval", "eval"], 1, "Choose a theme of color"],
                             },
-              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);print('>> End')",
+              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
@@ -189,7 +189,7 @@ form = \
               "parameters": {"feature": ["Breakdown Feature", "list(pb_data.classification)", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"],
                              "performance": ["Feature Distribution", "list(pb_data.performance)", ["choose_eval", "text"], 5, "Select a numeric feature to show its distribution"]
                             },
-              "after":{"exec":"""global script;global content;script, div = components(result);title='Distribution Scatter Plot';content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
+              "after":{"exec":"""global script;global content;script, div = components(result);title='Distribution Scatter Plot';content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content, 'script':script})"
                        }
@@ -201,7 +201,7 @@ form = \
               "parameters": {"feature": ["Breakdown Feature", "list(pb_data.classification)", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"],
                              "performance": ["Time Series of Feature", "list(pb_data.performance)", ["choose_eval", "text"], 5, "Select a numeric feature to show its distribution"]
                             },
-              "after":{"exec":"""global script;global content;script, div = components(result);title='Time Series Plot';content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
+              "after":{"exec":"""global script;global content;script, div = components(result);title='Time Series Plot';content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content, 'script':script})"
                        }
@@ -214,7 +214,7 @@ form = \
                              "y": ["Axis Y", "list(pb_data.data.columns)", ["choose_eval", "text"], 5, "Select a numeric feature to show its distribution"],
                              "cate": ["Hue with Feature", "list(pb_data.classification)", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"],
                             },
-              "after":{"exec":"""global script;global content;script, div = components(result);title='Feature Scatter Plot';content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
+              "after":{"exec":"""global script;global content;script, div = components(result);title='Feature Scatter Plot';content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content, 'script':script})"
                        }
@@ -224,7 +224,7 @@ form = \
               "available_phase":    [3],
               "type": "ajax", 
               "parameters": {},
-              "after":{"exec":"""div=result;title='Data Details (top 100 rows)';global content;content=format_result(title, '', div, ['delete', 'download', 'funcinfo']);print('>> End')""",
+              "after":{"exec":"""div=result;title='Data Details (top 100 rows)';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
@@ -236,11 +236,11 @@ form = \
               "parameters": {
                   "word_scale": ["Scale of Word", "100", ["text_edible", 'small', 'text'], 5, "scale of words to show"],
                   "n_topics": ["Extracted Topic #", "10", ["text_edible", 'small', 'text'], 5, "How much topics extracted from original feature"],
-                  "decomposition_type": ["Visualization Type", "['PCA', 'NMF', 'tSNE', 'nx.layout.fruchterman_reingold_layout', 'nx.spring_layout']", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"]},
+                  "vis_type": ["Visualization Type", "['PCA', 'NMF', 'tSNE', 'nx.layout.fruchterman_reingold_layout', 'nx.spring_layout']", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"]},
               "after":{"exec":"""global script;global content;
                                  \nscript, div = components(result);
                                  \ntitle='Feature Scatter Plot';
-                                 \ncontent=format_result(title, '', div, ['delete', 'download', 'funcinfo']);
+                                 \ncontent=format_result(title, '', div, ['close', 'hide', 'show', 'info']);
                                  \nscript = script.replace('<script type="text/javascript">', '').replace('</script>', '');
                                  \nprint('>> End')""",
                        "script":"",

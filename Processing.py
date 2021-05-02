@@ -248,7 +248,7 @@ class Processor:
         
     def co_occurence(self, scale = 500, clustering=False):
         co_dict = {}
-        top_list = self.keywords['word'].to_list()[:scale]
+        top_list = self.keywords['word'].to_list()[0:scale]
         print(">> Start Building Co-occurence Matrix...")
         for item_doc in self.data.Tokenize.to_list():
             for first_word in item_doc:
@@ -309,6 +309,7 @@ class Processor:
         self.sub_pos = sub_pos
         self.data["BaggingVector"] = self.data["Tokenize"].progress_apply(lambda x: d2v(x))
         print("\n>> Extracting Finished...")
+        
     
         
 if __name__ == '__main__':

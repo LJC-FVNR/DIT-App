@@ -428,29 +428,38 @@
             var start_getting = $.ajax(get_status);
         }
         
+        function showDetails(){
+            var form = new FormData();
+            form.append("func-name", "DA.show_details");
+            hideAllFunc();
+            $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
+            $.ajax({
+                url:"{{ url_for('use_function', username=username) }}",
+                type:"post",
+                data:form,
+                dataType: 'json',
+                processData:false,
+                contentType:false,
+                success:function(arg){ 
+                        receiveStatus();
+                        $('#status').remove();
+                        if(arg.hasOwnProperty("success")){alert(arg["success"])}
+                        if(arg.hasOwnProperty("error")){alert(arg["error"])}
+                        if(arg.hasOwnProperty("script")){eval(arg["script"])}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').prepend($(arg["content"]))}
+                },
+                error:function(e){
+                        $('#status').remove();
+                        alert("Error Occured");
+                }
+            })
+        }
+        
         function deleteElement(btn_id){
             b = '#' + btn_id;
             if(["SELECT", "INPUT"].includes($(b).prev().prev().prop('nodeName'))){$(b).prev().remove()}
         }
-        
-        function showDetails(){
-            hideAllFunc();
-            $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
-            receiveStatus();
-            var formData = new FormData();
-            formData.append("func-name", "DA.show_details");
-            var request = new XMLHttpRequest();
-            request.open("POST", "{{ url_for('use_function', username=username) }}");
-            request.send(formData);
-            
-            request.onreadystatechange = function() { 
-                if (request.readyState == 4 && request.status == 200) { 
-                    $('#status').remove();
-                    window.location="{{url_for('render_panel_func', username=username)}}";
-                }
-            };
-        
-        }
+
         
         {{script|safe}}
         

@@ -744,12 +744,15 @@ class PB_Data:
         from sklearn.decomposition import NMF
         import networkx as nx
         from bokeh.models import HoverTool
-        
+        hv.extension('bokeh')
         # get data
+        word_scale = int(word_scale)
+        n_topics = int(n_topics)
         a, b= self.processor.co_occurence(scale=word_scale)
         word_set = set([i for i in np.array(a)[:, 0]])
         count = pd.DataFrame(a)
-        
+        self.processor.bag_of_word() # get word index and process doc vectors
+        word_index = [i for i in self.processor.sub_pos]
         # identify topics and corresponding colors
         print('\n>> Identifying Topics...')
         N = n_topics
@@ -764,7 +767,6 @@ class PB_Data:
         H = model.components_
         self.processor.data['Topic'] = pd.Series(np.argmin(W, axis=1))
         word_topic = np.argmin(H, axis=0)
-        word_index = [i for i in word_set]
         
         # generate position (x,y) of nodes
         print('\n>> Generating Position of each node...')
