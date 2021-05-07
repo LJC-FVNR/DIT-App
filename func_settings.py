@@ -77,7 +77,7 @@ form = \
                                            "finish":"""render_template('Template.html', TITLE="Processing", GLOBAL_VARIABLES=GLOBAL_VARIABLES, current_func=current_func,username=username,form_func_input_html=form_func_input_html, script=SCRIPT, content=CONTENT)"""
                                            }
                                     },
-          "select_data": {"call": "pb_data.select_data(**parameters)", 
+          "Select Data": {"call": "pb_data.select_data(**parameters)", 
                                   "info":               "The numeric way to get a subset of data",
                                   "available_phase":    [3],
                                   "type": "ajax", 
@@ -86,12 +86,26 @@ form = \
                                                  "value": ["Values", "", ["text_append", "None"], 5, "Write values"],
                                                  "inheritance": ["Inheritance", "False", ["choose", "False", "True"], 3, "whether to query based on the latest selected data (False) or the overall data (True)"]
                                                 },
-                                  "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
+                                  "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, TOOLS);print('>> End')",
                                            "script":"",
                                            "finish":"jsonify({'content':content})"
                                            }
                                     },
-        "query_by": {"call": "pb_data.query_by(**parameters)", 
+          "Select Data (Choose)": {"call": "pb_data.select_data(**parameters)", 
+                                "info":               "The numeric way to get a subset of data",
+                                "available_phase":    [3],
+                                "type": "ajax", 
+                                "parameters": {"feature": ["Columns", "list(pb_data.data.columns)", ["choose_append"], 5, "Select columns"],
+                                               "operator": ["Operators", "['==', '!=', '>', '<', '>=', '<=']", ["choose_append"], 5, "Select numeric operators"],
+                                               "value": ["Values", "", ["text_append", "None"], 5, "Write values"],
+                                               "inheritance": ["Inheritance", "False", ["choose", "False", "True"], 3, "whether to query based on the latest selected data (False) or the overall data (True)"]
+                                              },
+                                "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, TOOLS);print('>> End')",
+                                         "script":"",
+                                         "finish":"jsonify({'content':content})"
+                                         }
+                                  },
+        "Query by Keywords": {"call": "pb_data.query_by(**parameters)", 
                       "info":               'Select data by searching keywords in a column with logical operators: and, or, not. Use "" to specify the exact spelling of a keyword',
                       "available_phase":    [3],
                       "type": "ajax", 
@@ -101,12 +115,12 @@ form = \
                                      "kw_not": ["Keywords: Not", "", ["text_edible", 'small', 'text'], 4, "None of these keywords should appear"],
                                      "inheritance": ["Inheritance", "False", ["choose", "False", "True"], 3, "whether to query based on the latest selected data (False) or the overall data (True)"]
                                     },
-                      "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
+                      "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, TOOLS);print('>> End')",
                                "script":"",
                                "finish":"jsonify({'content':content})"
                                }
                         },
-        "query_bulk": {"call": "pb_data.query_bulk(**parameters)", 
+        "Query by Bulk Keywords": {"call": "pb_data.query_bulk(**parameters)", 
               "info":               'Select data by positioning bulk input that contained in a feature',
               "available_phase":    [3],
               "type": "ajax", 
@@ -114,12 +128,12 @@ form = \
                              "Q_List": ["Bulk List", "", ["text_edible", 'large', 'text'], 5, "Use ',' or line breaks to split each element"],
                              "inheritance": ["Inheritance", "False", ["choose", "False", "True"], 3, "whether to query based on the latest selected data (False) or the overall data (True)"]
                             },
-              "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
+              "after":{"exec":"div=pb_data.full_describe();title='Data Selected';global content;content=format_result(title, '', div, TOOLS);print('>> End')",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
                 },
-        "combinatorial_query_by": {"call": "pb_data.combinatorial_query_by(**parameters)", 
+        "Combinatorial Query": {"call": "pb_data.combinatorial_query_by(**parameters)", 
               "info":               'Classifying and selecting data by multiple keyword rules and form a new categorical feature based on this for further analysis',
               "available_phase":    [3],
               "type": "ajax", 
@@ -132,21 +146,18 @@ form = \
               "after":{"exec":"""div=pb_data.full_describe() 
                        \ntitle='Data Selected' 
                        \nglobal content
-                       \ncontent=format_result(title, '', div, ['close', 'hide', 'show', 'info']) 
+                       \ncontent=format_result(title, '', div, TOOLS) 
                        \nprint('>> End')
                        \nglobal RELOADED
                        \nglobal script
                        \nif RELOADED == False:
                        \n    script = 'location.reload()'
-                       \n    RELOADED == True
-                       \nelse:
-                       \n    RELOADED == False
-                       \n    script = ''""",
+                       \n""",
                        "script":"",
                        "finish":"jsonify({'content':content, 'script':script})"
                        }
                 },
-        "feature_summary": {"call": "result = pb_data.feature_summary(**parameters)", 
+        "Feature Pivot": {"call": "result = pb_data.feature_summary(**parameters)", 
               "info":               'Summarize and aggregate performance data with breakdown of categorical features',
               "available_phase":    [3],
               "type": "ajax", 
@@ -159,12 +170,12 @@ form = \
                              "grand_total": ["Show Grand Total", "True", ["choose", "False", "True"], 3, "whether showing grand_total for numerical features"],
                              "color_map": ["Color Map", "['None']", ["choose_eval", "eval"], 1, "Choose a theme of color"]
                             },
-              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
+              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, TOOLS);print('>> End')",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
                 },
-        "feature_summary_dual": {"call": "global result;result = pb_data.feature_summary_dual(**parameters)", 
+        "Feature Pivot - Dual": {"call": "global result;result = pb_data.feature_summary_dual(**parameters)", 
               "info":               'Summarize and aggregate performance data with breakdown of two categorical features',
               "available_phase":    [3],
               "type": "ajax", 
@@ -177,36 +188,36 @@ form = \
                              "color": ["Show Color", "True", ["choose", "False", "True"], 3, "whether to colorize the summary"],
                              "color_map": ["Color Map", "['None']", ["choose_eval", "eval"], 1, "Choose a theme of color"],
                             },
-              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')",
+              "after":{"exec":"div=result.render();title='Feature Breakdown';global content;content=format_result(title, '', div, TOOLS);print('>> End')",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
                 },
-        "draw_feature_distribution_scatter": {"call": "global result;result = pb_data.draw_feature_distribution_scatter(**parameters)", 
+        "Distribution Scatter Plot": {"call": "global result;result = pb_data.draw_feature_distribution_scatter(**parameters)", 
               "info":               'Draw the jitter distribution plot of a feature',
               "available_phase":    [3],
               "type": "ajax", 
               "parameters": {"feature": ["Breakdown Feature", "list(pb_data.classification)", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"],
                              "performance": ["Feature Distribution", "list(pb_data.performance)", ["choose_eval", "text"], 5, "Select a numeric feature to show its distribution"]
                             },
-              "after":{"exec":"""global script;global content;script, div = components(result);title='Distribution Scatter Plot';content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
+              "after":{"exec":"""global script;global content;script, div = components(result);title='Distribution Scatter Plot';content=format_result(title, '', div, TOOLS);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content, 'script':script})"
                        }
                 },
-        "draw_feature_time_seires_heatmap": {"call": "global result;result = pb_data.draw_feature_time_seires_heatmap(**parameters)", 
+        "Time Series / Heatmap Plot": {"call": "global result;result = pb_data.draw_feature_time_seires_heatmap(**parameters)", 
               "info":               'Draw the line plot and heatmap based on the preset time series',
               "available_phase":    [3],
               "type": "ajax", 
               "parameters": {"feature": ["Breakdown Feature", "list(pb_data.classification)", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"],
                              "performance": ["Time Series of Feature", "list(pb_data.performance)", ["choose_eval", "text"], 5, "Select a numeric feature to show its distribution"]
                             },
-              "after":{"exec":"""global script;global content;script, div = components(result);title='Time Series Plot';content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
+              "after":{"exec":"""global script;global content;script, div = components(result);title='Time Series Plot';content=format_result(title, '', div, TOOLS);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content, 'script':script})"
                        }
                 },
-        "draw_feature_scatter": {"call": "global result;result = pb_data.draw_feature_scatter(**parameters)", 
+        "Custom Feature Relationship Plot": {"call": "global result;result = pb_data.draw_feature_scatter(**parameters)", 
               "info":               'Draw scatter plot with the selected axes and a categorical breakdown',
               "available_phase":    [3],
               "type": "ajax", 
@@ -214,22 +225,22 @@ form = \
                              "y": ["Axis Y", "list(pb_data.data.columns)", ["choose_eval", "text"], 5, "Select a numeric feature to show its distribution"],
                              "cate": ["Hue with Feature", "list(pb_data.classification)", ["choose_eval", "text"], 5, "Select a categorical feature draw its breakdown distribution plot"],
                             },
-              "after":{"exec":"""global script;global content;script, div = components(result);title='Feature Scatter Plot';content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
+              "after":{"exec":"""global script;global content;script, div = components(result);title='Feature Scatter Plot';content=format_result(title, '', div, TOOLS);script = script.replace('<script type="text/javascript">', '').replace('</script>', '');print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content, 'script':script})"
                        }
                 },
-        "show_details": {"call": "global result;result = pb_data.show_details(**parameters)", 
+        "Show Details": {"call": "global result;result = pb_data.show_details(**parameters)", 
               "info":               'Show top 100 rows of the latest queried data',
               "available_phase":    [3],
               "type": "ajax", 
               "parameters": {},
-              "after":{"exec":"""div=result;title='Data Details (top 100 rows)';global content;content=format_result(title, '', div, ['close', 'hide', 'show', 'info']);print('>> End')""",
+              "after":{"exec":"""div=result;title='Data Details (top 100 rows)';global content;content=format_result(title, '', div, TOOLS);print('>> End')""",
                        "script":"",
                        "finish":"jsonify({'content':content})"
                        }
                 },
-        "generate_topic_model": {"call": "global result;result = pb_data.generate_topic_model(**parameters)", 
+        "Generate Topic Model - Plot": {"call": "global result;result = pb_data.generate_topic_model(**parameters)", 
               "info":               'Generate co-occurence mapping with specific strategy based on processed name feature',
               "available_phase":    [3],
               "type": "ajax", 
@@ -240,7 +251,7 @@ form = \
               "after":{"exec":"""global script;global content;
                                  \nscript, div = components(result);
                                  \ntitle='Feature Scatter Plot';
-                                 \ncontent=format_result(title, '', div, ['close', 'hide', 'show', 'info']);
+                                 \ncontent=format_result(title, '', div, TOOLS);
                                  \nscript = script.replace('<script type="text/javascript">', '').replace('</script>', '');
                                  \nprint('>> End')""",
                        "script":"",

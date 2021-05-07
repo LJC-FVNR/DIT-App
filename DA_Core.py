@@ -243,12 +243,26 @@ class PB_Data:
         return [self.attribute[i] if i in self.attribute else i for i in feat_list]
             
     def feature_summary(self, feature:list, data=None, performance=['ASIN', 'ordered_units', 'ops', 'product_cogs_amt', 'contribution_profit_amt'],
-                            agg=['count', 'sum', 'sum', 'sum', ['sum', 'mean']], distribution=True, 
+                            agg=['count', 'sum', 'sum', 'sum', 'mean'], distribution=True, 
                             percentage=True, color_map=None, color=True, grand_total=True):
+        # read features
+        feature = [feature] if type(feature) is str else feature
+        performance = [performance] if type(performance) is str else performance
+        feature_name = [i for i in feature]
+        feature = self.uniform_feature(feature)
+        performance = self.uniform_feature(performance)
+        feature_len = len(feature)
+        # clean input
+        min_len = min(len(performance), len(agg))
+        performance, agg = performance[0:min_len], agg[0:min_len]
+                
         # initialize data and color map list
         if data is None:
-            data = self.latest_query
-        if color_map is None:
+            data = copy.deepcopy(self.latest_query)
+        for i in range(min_len):
+            if agg[i] == 'count':
+                data[performance[i]] = data[performance[i]].astype('str')
+        if color_map is None or color_map == 'None':
             color_map = self.default_cmap
         if type(color_map) is not list:
             color_map = [color_map]
@@ -262,13 +276,6 @@ class PB_Data:
                 cc = cc+1 if cc+1<color_length else 0
                 self.color_wait = not self.color_wait
             return cc
-        # read features
-        feature = [feature] if type(feature) is str else feature
-        performance = [performance] if type(performance) is str else performance
-        feature_name = [i for i in feature]
-        feature = self.uniform_feature(feature)
-        performance = self.uniform_feature(performance)
-        feature_len = len(feature)
         
         # handling data type
         data_type = {i:data[i].dtype.name for i in performance}
@@ -452,10 +459,29 @@ class PB_Data:
     def feature_summary_dual(self, data=None, index=['vendor_code'], columns=["marketplace"], 
                              values=['ops'], agg=['sum'], color=True, color_map=None, 
                              percentage=False, grand_total=True):
+        # read features
+        index = [index] if type(index) is str else index
+        agg = [agg] if type(agg) is str else agg
+        columns = [columns] if type(columns) is str else columns
+        values = [values] if type(values) is str else values
+        feature_name = index + columns
+        index = self.uniform_feature(index)
+        columns = self.uniform_feature(columns)
+        values = self.uniform_feature(values)
+        
+        # clean input
+        min_len = min(len(values), len(agg))
+        values, agg = values[0:min_len], agg[0:min_len]
         # initialize data and color map list
         if data is None:
-            data = self.latest_query
-        if color_map is None:
+            data = copy.deepcopy(self.latest_query)
+        for i in range(min_len):
+            if agg[i] == 'count':
+                data[values[i]] = data[values[i]].astype('str')
+        data[index] = data[index].astype('str')
+        data[columns] = data[columns].astype('str')
+            
+        if color_map is None or color_map == 'None':
             color_map = self.default_cmap
         if type(color_map) is not list:
             color_map = [color_map]
@@ -464,15 +490,6 @@ class PB_Data:
         def color_on_change(cc): 
             cc = cc+1 if cc+1<color_length else 0
             return cc
-        
-        # read features
-        index = [index] if type(index) is str else index
-        columns = [columns] if type(columns) is str else columns
-        values = [values] if type(values) is str else values
-        feature_name = index + columns
-        index = self.uniform_feature(index)
-        columns = self.uniform_feature(columns)
-        values = self.uniform_feature(values)
         
         if data[values[0]].dtype.name == 'object':
             agg = [self.counts]
@@ -533,6 +550,10 @@ class PB_Data:
             ci.loc["Sub Total", ("Grand Total",'','')] = self.data[self.data[index[0]].map(lambda x: x in ci_index)][values[0]].sum() if self.data[index[0]].dtype.name != 'object' else self.counts(self.data[self.data[index[0]].map(lambda x: x in ci_index)][values[0]])
             
         if percentage:
+            print(ci)
+            print(ci.loc["Grand Total", ("Sub Total",'','')])
+            print(ci.loc["Sub Total", ("Grand Total",'','')])
+            print(ci.loc["Sub Total", ("Sub Total",'','')])
             ci = ci/ci.loc["Sub Total", ("Sub Total",'','')]
         
         if color:
@@ -700,7 +721,7 @@ class PB_Data:
         
         overlay_scatter.opts(
             opts.Scatter(color=hv.Cycle('Category20'), line_color='grey', size=(dim('asin_counter').lognorm()+0.3)*11,
-                         show_grid=True, width=760+max(data_draw[cate].map(lambda x: len(x)))*5, height=400, tools=[hover], alpha=0.8),
+                         show_grid=True, width=760+max(data_draw[cate].map(lambda x: len(str(x))))*5, height=400, tools=[hover], alpha=0.8),
             opts.NdOverlay(legend_position='right', show_frame=False, xformatter=xformatter, yformatter=yformatter, 
                            fontsize={'legend':7.5}))
         return hv.render(overlay_scatter)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, response, session
 import pandas as pd
 from werkzeug.utils import secure_filename
 import os
@@ -20,8 +20,11 @@ app = Flask(__name__)
 app.Debug = True
 app.debug = True
 app._static_folder = "static"
-
+response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+response.headers['X-Content-Type-Options'] = 'nosniff'
 pd.set_option('display.max_rows', None)
+
+app.config['SECRET_KEY'] = os.urandom(24)
 
 # ---------Widgets Realization------------
 WARNING = []
@@ -39,7 +42,10 @@ content = ''
 SCRIPT = ''
 CONTENT = ''
 
+TOOLS = ['close', 'hide', 'show', 'info']
+
 RESULT_INDEX_ID = 1 # Set a individual id for each output result
+CURRENT_CONTENT = []
 RELOADED = False # for the reloading action of DA_Core.combinatorial_query_by
 CONTENT_CACHE = []
 SCRIPT_CACHE = []
@@ -181,6 +187,8 @@ def use_function(username):
         traceback.print_exc()
         return jsonify({'error': 'Error occured'})
     # APP_PRINT.reset()
+    
+
 
 
 @app.route("/panel/<username>/", methods=['GET'])
@@ -453,10 +461,10 @@ def format_result(title, script, div, tools:list):
     div_id = 'result'+str(RESULT_INDEX_ID)
     # title: "t", script, div, tools: ['delete', 'download', 'funcinfo']}
     close = f"""
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_close_{RESULT_INDEX_ID}" onclick="$('#btn_result_{RESULT_INDEX_ID}').parent().parent().remove()">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_close_{RESULT_INDEX_ID}" onclick="$(this).parent().parent().remove()">
                <i class="bi bi-x-circle"><span class="icon-text">Close</span> </i>
             </button>
-            """ if 'delete' in tools else ""
+            """ if 'close' in tools else ""
             
     hide = f"""
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_hide_{RESULT_INDEX_ID}" onclick="$(this).parent().prev().hide()">
@@ -484,7 +492,7 @@ def format_result(title, script, div, tools:list):
                 <b contenteditable="true">■ {title} </b>
         </div>
         <!-- Main Content Here -->
-        <div class="main-content d-flex justify-content-center">
+        <div class="main-content justify-content-center" style="display:flex">
                 {script}
                 {div}
         </div>
