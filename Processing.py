@@ -33,11 +33,11 @@ class Processor:
            "&yuml;": "ÿ", "&ndash;":""
            }
 
-    def __init__(self, DATA, VENDORCODE_MAPPING, VENDORCODE_ORIGINAL, 
-                 STOPWORDS, UNIT, COMBINE, MAPPING, USER_PATH='',
+    def __init__(self, DATA, VENDORCODE_MAPPING=None, VENDORCODE_ORIGINAL=None, 
+                 STOPWORDS=None, UNIT=None, COMBINE=None, MAPPING=None, USER_PATH='',
                  DICTIONARY=None, VENDORCODE=None, OUTPUT=None, 
-                 do_doc2vec=False, do_clustering=False,
-                 loaded_data=True, marketplace_id="marketplace_id", item_name="item_name"):
+                 do_doc2vec=False,
+                 marketplace_id="marketplace_id", item_name="item_name"):
         def vendor_code_mapping():
             vendor_mapping = pd.read_excel(VENDORCODE_MAPPING)
             vendor_code_original = pd.read_excel(VENDORCODE_ORIGINAL)
@@ -149,6 +149,7 @@ class Processor:
         self.VENDORCODE = VENDORCODE
         self.OUTPUT = OUTPUT
         self.USER_PATH = USER_PATH
+        self.enable_topk = False
         print("\n>> Reading Data...    ")
         self.data = DATA
         print("\n>> Reading Data Finished    ")
@@ -194,8 +195,6 @@ class Processor:
         print("\n>>Keywords Extraction Finished    ")
         if do_doc2vec:
             self.doc2vec()
-        if do_clustering:
-            self.doc_clustering()
         print(">> End")
 
     def save(self):
@@ -220,20 +219,6 @@ class Processor:
         df.to_excel('{}'.format(output), index=False)
     
     def tfidf_extraction(self, subset=None):
-        def is_number(s):
-            try:
-                float(s)
-                return True
-            except ValueError:
-                pass
-         
-            try:
-                import unicodedata
-                unicodedata.numeric(s)
-                return True
-            except (TypeError, ValueError):
-                pass
-            return False
         if subset is not None:
             data = self.data[subset]
         else:
@@ -244,8 +229,13 @@ class Processor:
         self.keywords = pd.DataFrame([i for i in full_winfo if i[2] in ["JJ", "NNP", "VBP", 'VBG', 'VBD', 'VBN', 'CD', 'NN', 'NNPS', 'RB', 'IN'] 
                                       and not is_number(i[0])], columns=["word", "idf", "tag"]).sort_values(by="idf", ascending=True).reset_index(drop=False)
         self.full_words = pd.DataFrame(full_winfo, columns=["word", "idf", "tag"]).sort_values(by="idf", ascending=True).reset_index(drop=False)
-        self.topk = lambda k: self.keywords.loc[0: k]['word'].to_list()
+        self.enable_topk == True
         
+    def topk(self, k):
+        if self.enable_topk:
+            return self.keywords.loc[0: k]['word'].to_list()
+        else:
+            return None
     def co_occurence(self, scale = 500, clustering=False):
         co_dict = {}
         top_list = self.keywords['word'].to_list()[0:scale]
@@ -310,7 +300,20 @@ class Processor:
         self.data["BaggingVector"] = self.data["Tokenize"].progress_apply(lambda x: d2v(x))
         print("\n>> Extracting Finished...")
         
-    
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        pass
+ 
+    try:
+        import unicodedata
+        unicodedata.numeric(s)
+        return True
+    except (TypeError, ValueError):
+        pass
+    return False
         
 if __name__ == '__main__':
     # read data and dictionary

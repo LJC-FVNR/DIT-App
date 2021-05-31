@@ -31,7 +31,8 @@ class PB_Data:
                      'reporting_year', 'marketplace_id', 'marketplace', 'hdl_classification']
     
     def __init__(self, processor, classification:list, performance:list, 
-                 name='unnamed', universal_label="Full Data", time_series=None, **kwargs):
+                 name='unnamed', universal_label="Full Data", time_series=None,
+                 auto_labeling=False, **kwargs):
         '''
         data: raw data
         classification: slice of classification columns (
@@ -66,13 +67,14 @@ class PB_Data:
                                'subscription_revenue_amt', 'shipping_cost_amt', 'display_ads_amt',
                                'vendor_profit_amt', 'refunded_amt']
         self.set_attribute(kwargs) # self.attribute: key features utilized in search section
-        self.set_label(classification, performance)
+        self.set_label(classification, performance, auto_labeling)
         self.set_data(data, universal_label)
         self.set_time(time_series)
         self.set_category()
         
     def reset(self):
         self.data = self.reset_data
+        self.latest_query = self.reset_data
     
     def set_config_currency(self, config_currency:list):
         self.config_currency = config_currency
@@ -81,6 +83,10 @@ class PB_Data:
         if time_series is None:
             time_series = ['reporting_year','reporting_qtr']
         time_series = self.uniform_feature(time_series)
+        is_flt = {}
+        for ts in time_series:
+            if self.data[ts].dtype.name not in ['object', 'category']:
+                self.data[ts] = self.data[ts].astype('Int64')
         self.data['Time_Series'] = eval("+".join([f'self.data["{i}"].astype("str")' for i in time_series]))
         self.classification.append('Time_Series')
         
@@ -118,7 +124,7 @@ class PB_Data:
         self.data = data
         self.data['combinatorial_queries'] = self.data.iloc[:, 0].map(lambda x: '')
         self.classification.append('combinatorial_queries')
-        self.latest_query = copy.deepcopy(data)
+        self.latest_query = copy.deepcopy(self.data)
         self.universal_label = universal_label
         return self
     
@@ -126,6 +132,7 @@ class PB_Data:
         left = feature if type(feature) is list else [feature]
         mid = operator if type(operator) is list else [operator]
         right = value if type(value) is list else [value]
+        right = [string_type(i) for i in right]
         min_len = min([len(left), len(mid), len(right)])
         left, mid, right = left[0:min_len], mid[0:min_len], right[0:min_len]
         select = list(zip(left, mid, right))
@@ -136,11 +143,26 @@ class PB_Data:
         self.latest_query = copy.deepcopy(self.data[eval(selected)]) if inheritance==False else copy.deepcopy(self.latest_query[eval(selected)])
         return self.latest_query
         
-    def set_label(self, classification, performance):
+    def set_label(self, classification, performance, auto_labeling):
         # initialize / manipulate feature labels
-        self.classification = classification
-        self.performance = performance
-        return self
+        if auto_labeling:
+            rows = self.data.shape[0]
+            threshold = int(rows * 0.01)
+            is_object = {x:self.data[x].dtype == np.dtype('object') for x in self.data.columns}
+            count = {x:len(self.data[x].unique())<threshold for x in self.data.columns}
+            cla, perf = [], []
+            for x in is_object:
+                if is_object[x]:
+                    cla.append(x)
+                elif is_object[x]==False and count[x]==True:
+                    cla.append(x)
+                else:
+                    perf.append(x)
+            self.classification = cla
+            self.performance = perf
+        else:
+            self.classification = classification
+            self.performance = performance
     
     def query_by(self, kw_and=None, kw_or=None, kw_not=None, attr=None, inheritance=False):
         q_data = self.data if inheritance==False else self.latest_query
@@ -202,7 +224,7 @@ class PB_Data:
             raise(f"Cannot Find {cl} in Data")
 
     def combinatorial_query_by(self, kw_and='', kw_or='', kw_not='', attr=None, show_overall=False, inheritance=False):
-        print(kw_and, kw_or, kw_not, attr, show_overall, inheritance)
+        q_data = self.data if inheritance==False else self.latest_query
         left = kw_and if type(kw_and) is list else [kw_and]
         mid = kw_or if type(kw_or) is list else [kw_or]
         right = kw_not if type(kw_not) is list else [kw_not]
@@ -218,15 +240,15 @@ class PB_Data:
             for ql, at in zip(query_list, attr):
                 query_name = " | ".join(ql)
                 q_index = self.query_by(kw_and=ql[0], kw_or=ql[1], kw_not=ql[2], attr=attr).index
-                self.data.loc[:, 'combinatorial_queries'] = self.data.apply(lambda x: x['combinatorial_queries']+query_name if x.name in q_index else x['combinatorial_queries'], axis=1)
+                q_data.loc[:, 'combinatorial_queries'] = q_data.apply(lambda x: x['combinatorial_queries']+query_name if x.name in q_index else x['combinatorial_queries'], axis=1)
         else:
             for ql in query_list:
                 query_name = " | ".join(ql)
                 q_index = self.query_by(kw_and=ql[0], kw_or=ql[1], kw_not=ql[2], attr=attr).index
-                self.data.loc[:, 'combinatorial_queries'] = self.data.apply(lambda x: x['combinatorial_queries']+query_name if x.name in q_index else x['combinatorial_queries'], axis=1)
-        self.latest_query = copy.deepcopy(self.data)
+                q_data.loc[:, 'combinatorial_queries'] = q_data.apply(lambda x: x['combinatorial_queries']+query_name if x.name in q_index else x['combinatorial_queries'], axis=1)
+        self.latest_query = copy.deepcopy(q_data)
         if show_overall == False:
-            self.latest_query = copy.deepcopy(self.data[self.data['combinatorial_queries'] != ''])
+            self.latest_query = copy.deepcopy(q_data[q_data['combinatorial_queries'] != ''])
         self.data['combinatorial_queries'] = self.data.iloc[:, 0].map(lambda x: '')
         return self.latest_query
     
@@ -234,6 +256,8 @@ class PB_Data:
     def distribution(self, x):
         bins=np.histogram(x)[0]
         sl = ''.join(sparklines(bins))
+        if sl == '0' or 0:
+            sl = None
         return sl
     
     def counts(self, x):
@@ -259,9 +283,12 @@ class PB_Data:
         # initialize data and color map list
         if data is None:
             data = copy.deepcopy(self.latest_query)
+        agg = [agg] if type(agg) is str else agg
         for i in range(min_len):
             if agg[i] == 'count':
                 data[performance[i]] = data[performance[i]].astype('str')
+            if agg[i] == 'sum' or agg[i] == 'mean':
+                agg[i] = [agg[i]]                       # to simply fix a invisible bug
         if color_map is None or color_map == 'None':
             color_map = self.default_cmap
         if type(color_map) is not list:
@@ -281,8 +308,14 @@ class PB_Data:
         data_type = {i:data[i].dtype.name for i in performance}
         
         # standardize function name for aggfunc
-        agg = [agg] if type(agg) is str else agg
-        agg = [self.counts if i=='count' else i for i in agg]
+        for index, ele in enumerate(agg):
+            if type(ele) is list:
+                for inner_index, inner_ele in enumerate(ele):
+                    if inner_ele == 'count':
+                        agg[index][inner_index] = self.counts
+            else:
+                if ele=='count':
+                    agg[index] = self.counts
         agg = {p:a for p,a in zip(performance, agg)} if len(agg)==len(performance) else {p:a for p,a in zip(performance, [agg]*len(performance))}
         # correct agg based on dtype
         for i in agg:
@@ -390,7 +423,7 @@ class PB_Data:
                     grand.index = pd.MultiIndex.from_tuples([tuple([""]*(feature_len-2)+["Total"]+["Grand Total"])], names=ci.index.names)
                     ci = pd.concat([ci, grand])
             else:
-                ci.loc["Sub Total"] =ci.apply(get_sub)
+                ci.loc["Sub Total"] = ci.apply(get_sub)
                 if grand_total:
                     ci.loc["Grand Total"] =ci.apply(get_grand) 
         
@@ -400,7 +433,10 @@ class PB_Data:
                 current_columns = [i for i in ci.columns if i[0] == p]
                 generate_columns = [(i[0]+'%', i[1]) for i in ci.columns if i[0] == p]
                 for cc, gc in zip(current_columns, generate_columns):
-                    ci[gc] = ci[cc].map(lambda x: x/ci[cc][-2])
+                    if grand_total:
+                        ci[gc] = ci[cc].map(lambda x: x/ci[cc].to_list()[-2])
+                    else:
+                        ci[gc] = ci[cc].map(lambda x: x/ci[cc].sum())
                     pp_index.append(gc)
         
         # sort
@@ -583,9 +619,9 @@ class PB_Data:
         if feature in self.config_currency:
             formatting = '{$0:,f}' if brace else '$0:,f'
         else:
-            formatting = '{:.2f}' if brace else ':.2f'
+            formatting = '{:.2f}' if brace else '.2f'
         if percentage:
-            formatting = '{:.2%}' if brace else ':.2%'
+            formatting = '{:.2%}' if brace else '.2%'
         return formatting
     
     def draw_feature_distribution_scatter(self, feature:str, performance='product_cogs_amt', ddata=None):
@@ -651,7 +687,6 @@ class PB_Data:
         ag = []
         heatmap = hv.HeatMap(draw, label='Total')
         aggregate = hv.Dataset(heatmap).aggregate('Time_Series', np.sum, np.std)
-
         features = list(set(draw[feature]))
         feature_length = len(features)
         for i in range(feature_length):
@@ -753,10 +788,10 @@ class PB_Data:
         except:pass
         return d
     
-    def show_details(self, sdata=None):
+    def show_details(self, sdata=None, scale=100):
         if sdata is None:
             sdata = self.latest_query
-        d = sdata.head(100).style.render()
+        d = sdata.head(scale).style.render()
         return d
     
     def generate_topic_model(self, word_scale=100, n_topics=10, vis_type='PCA'):
@@ -777,11 +812,11 @@ class PB_Data:
         # identify topics and corresponding colors
         print('\n>> Identifying Topics...')
         N = n_topics
-        colors = hv.Cycle('Category20').values
-        if N < 20:
+        colors = hv.Cycle('Category10').values
+        if N < 10:
             colors = colors[0:N]
         else:
-            colors = int(N/20) * colors + colors[0:(N%20)]
+            colors = int(N/10) * colors + colors[0:(N%10)]
         model = NMF(n_components=N, init='random', random_state=0)
         X = self.processor.data["BaggingVector"].to_list()
         W = model.fit_transform(X)
@@ -819,8 +854,7 @@ class PB_Data:
         word_de = pd.DataFrame({'x':P[0], 'y':P[1], 'index':word_index, 'word':word_index, 'topic':word_topic, 'color':[colors[i] for i in word_topic]})
         nodes = word_de[word_de['word'].isin(word_set)]
         nodes['counter'] = nodes['word'].map(lambda x: int(count[count[0]==x][1]))
-        nodes['size'] = ((nodes['counter']-nodes['counter'].min())/(nodes['counter'].max()-nodes['counter'].min()))*20 + 20
-        
+        nodes['size'] = ((nodes['counter']-nodes['counter'].min())/(nodes['counter'].max()-nodes['counter'].min()))*20 + 20        
         # generathe map
         edges = b
         main_graph = hv.Graph((edges, nodes))
@@ -832,4 +866,29 @@ class PB_Data:
         fig = main_graph * labels
         fig.opts(width=1000, height=1000)
         return hv.render(fig)
-                
+    
+    
+    # tools ------------------------------------
+    def note(self, title, note):
+        note = '<div class="content-note">' + note + "</div>"
+        return title, note
+
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        pass
+ 
+    try:
+        import unicodedata
+        unicodedata.numeric(s)
+        return True
+    except (TypeError, ValueError):
+        pass
+    return False
+
+def string_type(d):
+    res = d if is_number(d) else "'{}'".format(str(d))
+    return res

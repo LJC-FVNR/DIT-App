@@ -29,6 +29,18 @@ table thead{
     vertical-align: bottom;
 }
 
+tbody tr:nth-child(even){
+    background: #f5f5f5;
+}
+
+th:hover{
+    background: #bbdefb;
+}
+
+td:hover{
+    background: #ffb950b5 !important;
+}
+
 
 body
   {
@@ -310,4 +322,78 @@ label{
 
 .custom-select{
     font-size:0.5rem;
+}
+
+.nav-link{
+    padding-top: 0.25rem;
+    padding-right: 0.5rem;
+    padding-bottom: 0.25rem;
+    padding-left: 0.5rem;
+    font-size: 0.5rem;
+}
+
+.dashboard-title{
+    font-size: 0.9rem;
+    font-weight:600;
+}
+
+.dashboard-label{
+    font-size: 0.5rem;
+    font-weight: 370;
+}
+
+.dashboard-user{
+    font-weight: 300;
+    font-size: 0.35rem;
+    margin-left:0.3rem;
+}
+
+.tm-tools{
+    margin-left:0.5rem;
+    font-size:0.5rem;
+}
+
+.tm-titles, .col-form-label, .form-control, .modal-title, .modal-close{
+    font-size:0.5rem;
+}
+
+.col-form-label{
+    padding-top:0;
+}
+
+.tm-times{
+    font-size:0.4rem;
+}
+
+.tm-header{
+    font-size:0.6rem;
+    font-weight:630;
+}
+
+.pt-3{
+    padding-top: 0.5rem!important;
+}
+
+.pb-3{
+    padding-bottom: 0.5rem!important;
+}
+
+.modal-body{
+    padding-top:0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.modal-footer{
+    padding-top:0.2rem;
+    padding-bottom: 0.2rem;
+}
+
+.close{
+    padding-top:0.2rem;
+    
+}
+
+.content-note{
+    text-align: left;
+    font-size: 0.5rem;
 }

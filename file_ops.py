@@ -2,9 +2,11 @@
 import json
 import os
 import datetime
+import pickledb
 
 
 class USER:
+    
     def __init__(self, username):
         self.username = username
         self.path = f'static/user/{username}/'
@@ -12,6 +14,7 @@ class USER:
         self.calling_parameters = {}
         if not os.path.exists(self.path):
             self._generate_user()
+            self._generate_global_sending_id()
         else:
             self.get_user()
             
@@ -23,6 +26,27 @@ class USER:
         self.update_public(refresh=True)        # initialize user info and settings
         self.form_info()
         self.save_info()
+        self._generate_db()
+        self._generate_global_sending_id()
+            
+    def _generate_db(self):
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        if template_db.db.get(self.username) is None:
+            template_db.dcreate(self.username)
+            template_db.dump()
+    
+    def _generate_global_sending_id(self):
+        gsid_db = pickledb.load('static/user/public/template_view/gsid.db', False, sig=False)
+        if gsid_db.db.get(self.username) is None:
+            import random
+            import string
+            global_sending_id = ''.join(random.sample(string.ascii_letters + string.digits, 12))
+            gsid_db.set(self.username, global_sending_id)
+            gsid_db.dump()
+            
+    def get_global_sending_id(self):
+        gsid_db = pickledb.load('static/user/public/template_view/gsid.db', False, sig=False)
+        return gsid_db.get(self.username)
         
     def form_info(self):
         self.info = {'data':self.data, 'dictionary':self.dictionary, 
@@ -39,6 +63,10 @@ class USER:
         self.mapping = self.info['mapping']
         self.settings = self.info['settings']
         self.update_info_file()
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        if template_db.db.get(self.username) is None:
+            template_db.dcreate(self.username)
+            template_db.dump()
     
     def update_info_file(self):
         current_path = self.path + 'data/'
@@ -110,9 +138,60 @@ class USER:
                 if 'available_phase' in fs[module][func]:
                     if phase in fs[module][func]['available_phase']:
                         available_func[module+"."+func] = fs[module][func]
-        return available_func
+        available_func_class = {}
+        for i in available_func:
+            if available_func[i]['tab'] in available_func_class:
+                available_func_class[available_func[i]['tab']][i] = available_func[i]
+            else:
+                available_func_class[available_func[i]['tab']] = {i: available_func[i]}
+        return available_func_class
+    
+    # ------------------- view ops --------------------------------
+    def save_template(self, view, model, layout, template_name, layout_dict):
+        t = get_now()
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        temp = {'view':view, 'model':model, 'layout':layout, 'time':t, 'layout_dict':layout_dict}
+        template_db.dadd(self.username, (template_name, temp))
+        template_db.dump()
         
-            
+    def user_template_management(self):
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        temp_collection = template_db.get(self.username)
+        if temp_collection is None:
+            temp_collection = {}
+        return temp_collection
+    
+    def template_rename(self, template_name, template_new_name):
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        temp_content = template_db.dget(self.username, template_name)
+        template_db.dpop(self.username, template_name)
+        template_db.dadd(self.username, (template_new_name, temp_content))
+        template_db.dump()
+        
+    def template_delete(self, template_name):
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        template_db.dpop(self.username, template_name)
+        template_db.dump()
+        
+        
+class TemplateExternalReader:
+    def __init__(self, username):
+        self.username = username
+    
+    def get_template_name(self):
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        return template_db.dkeys(self.username)
+        
+    def get_template_view(self, template_name):
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        view, layout, t, layout_dict = template_db.dget(self.username, template_name)['view'], template_db.dget(self.username, template_name)['layout'], template_db.dget(self.username, template_name)['time'], template_db.dget(self.username, template_name)['layout_dict']
+        return view, layout, t, layout_dict
+    
+    def get_template_model(self, template_name):
+        template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
+        model, layout, t, layout_dict = template_db.dget(self.username, template_name)['model'], template_db.dget(self.username, template_name)['layout'], template_db.dget(self.username, template_name)['time'], template_db.dget(self.username, template_name)['layout_dict']
+        return model, layout, t, layout_dict
+    
 
 # ----------------- external functions ---------------------                
     

@@ -25,7 +25,7 @@
 </head>
 
 <body>
-    {% if GLOBAL_VARIABLES["DATA_LOADED"] != True %}
+    {% if session["DATA_LOADED"] != True %}
         <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center" style="width:100%; height:100%; position:fixed;">
           <!-- Then put toasts within -->
           <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-autohide="false">
@@ -60,44 +60,18 @@
       </li>
       <li>
         <a href="#">
-          <span>Home</span>
+          <span>User</span>
         </a>
         <ul class="nav-left-container-small">
           <li style="list-style: none">
           </li>
           <li>
-            <a class="J_menuItem" href="#">My Dashboard</a>
+            <a class="J_menuItem" href="{{url_for('template_management', username=username)}}">My Dashboard</a>
           </li>
           <li style="list-style: none">
           </li>
           <li>
-            <a class="J_menuItem" href="#">My Templates</a>
-          </li>
-          <li style="list-style: none">
-          </li>
-        </ul>
-      </li>
-      <li style="list-style: none">
-      </li>
-      <li>
-        <a href="#">
-          <span>Universal Data Processing</span>
-        </a>
-        <ul class="nav-left-container-small">
-          <li style="list-style: none">
-          </li>
-          <li>
-            <a class="J_menuItem" href="#">Data Extraction</a>
-          </li>
-          <li style="list-style: none">
-          </li>
-          <li>
-            <a class="J_menuItem" href="#">Keyword Analysis</a>
-          </li>
-          <li style="list-style: none">
-          </li>
-          <li>
-            <a class="J_menuItem" href="#">External Data Management</a>
+            <a class="J_menuItem" href="">User Settings</a>
           </li>
           <li style="list-style: none">
           </li>
@@ -128,18 +102,22 @@
       </li>
       <li>
         <a href="#">
-          <span>Outer Links</span>
+          <span>Save</span>
         </a>
         <ul class="nav-left-container-small">
           <li style="list-style: none">
           </li>
           <li>
-            <a class="J_menuItem" href="#">Data Sources</a>
+            <a role="button" data-toggle="modal" data-target="#createTemplate" style="color:rgba(210,219,221,0.8);">
+              <span>Save As Dashboard</span>
+            </a>
           </li>
           <li style="list-style: none">
           </li>
           <li>
-            <a class="J_menuItem" href="#">Wiki</a>
+           <a href="javascript:postStyle();">
+              <span>Save Layout</span>
+            </a>
           </li>
           <li style="list-style: none">
           </li>
@@ -148,16 +126,14 @@
       <li style="list-style: none">
       </li>
       <li>
-        <a href="#">
-          <span>Contact</span>
+        <a href="javascript:closeSession();">
+          <span>Close Session</span>
         </a>
-      </li>
-      <li style="list-style: none">
       </li>
     </ul>
     <div class="content">
-    
-        {% for warn in GLOBAL_VARIABLES['WARNING'] %}
+        
+        {% for warn in session['WARNING'] %}
             <!-- WARNING -->
             <div class="alert alert-danger error col-lg-9" role="alert">
                 {{ warn|safe }}
@@ -166,9 +142,9 @@
         
         
         <!-- HEADER Upload -->
-        {% if 'DATA_NAME' in GLOBAL_VARIABLES %}
+        {% if 'DATA_NAME' in session %}
             <div class="alert alert-dark error col-lg-9" role="alert">
-                Loaded Data: {{ GLOBAL_VARIABLES['DATA_NAME']|safe }}
+                Loaded Data: {{ session['DATA_NAME']|safe }}
             {% else %}
             <div class="alert alert-warning error col-lg-9" role="alert">
                 Please Upload or Choose Your Data
@@ -176,21 +152,19 @@
         </div>
         
         <!-- HEADER Registration -->
-        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
-            {% if GLOBAL_VARIABLES["PHASE"] == 1 %}
+        {% if session["DATA_LOADED"] == True %}
+            {% if session["PHASE"] == 1 %}
             <div class="alert alert-warning error col-lg-9" role="alert">
-                Please Registrate Your Data to the Data Processor with the method "Data_Processing.Initialize"
-            {% elif GLOBAL_VARIABLES["PHASE"] == 2 %}
+                Please Registrate Your Data to the Data Processor with the method "DataProcessing.Initialize"
+            {% elif session["PHASE"] == 2 %}
             <div class="alert alert-warning error col-lg-9" role="alert">
                 To Use the Data Analysis Tookits, Please Registrate Your Data with the Method "DA.Initialize" 
             {% else %}
-            <div class="alert alert-dark error col-lg-9" role="alert">
-                Data Registrated
             {% endif %}
             </div>
         {% endif %}
         
-        {% if GLOBAL_VARIABLES["DATA_LOADED"] != True %}
+        {% if session["DATA_LOADED"] != True %}
             <!-- UPLOADING&CHOOSING PANEL -->
             <form action="panel-upload/{{username}}/" method="post" enctype="multipart/form-data" id="upload">
             <div class="input-group mb-3 intro">
@@ -206,7 +180,7 @@
               </div>
             </div>
             </form>
-            <form action="panel-data/{{username}}/" method="post" id="chooseData">
+          <form action="panel-data/{{username}}/" method="post" id="chooseData">  
             <div class="input-group mb-3 intro">
               <select class="custom-select" id="selectData" name="filelink">
                 <option selected>Choose Available Data...</option>
@@ -222,100 +196,75 @@
         {% endif %}
         
         
-        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
+        {% if session["DATA_LOADED"] == True %}
             <!-- FUNCTION SELECTION TOOLS - KEY PANEL -->
             
-                <div class="input-group mb-3 intro" stype="margin-top:0">
-                  <div class="input-group-prepend">
-                    <label class="input-group-text" for="inputGroupSelect01">Function</label>
-                  </div>
-                  <select class="custom-select" id="funcSelector">
-                    <option selected>Select A Method...</option>
-                    {% for func in current_func %}
-                        <option value="FUNC{{loop.index}}">{{ func }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-
-                    {% for func in current_func %}
-                    <form method="post" id="FUNC{{loop.index}}" action="panel-func/{{username}}/">
-                        <div class="alert alert-dark error col-lg-9" role="alert">
-                        <p class="h6 func-title">Method: {{func}}</p>
-                        <p class="func-title-info">{{current_func[func]['info']}}</p>
-                        <input type="text" class="form-control" name="func-name" value="{{func}}" form="FUNC{{loop.index}}" style="display:None">
-                        {% set outer_loop = loop %}
-                            {% for name in current_func[func]['parameters'] %}
-                                {{ form_func_input_html(current_func[func]['parameters'], name, loop.index, outer_loop.index) | safe }}
-                            {% endfor %}
-                        <button type="button" class="btn btn-secondary btn-lg btn-block" style="border-radius: .1rem;" onclick={{current_func[func]["type"]}}Method("FUNC{{loop.index}}");>Submit</button>
-                        </div>
-                    </form>
-                    {% endfor %}
+                    {{ get_panel(session) | safe }}
             
         {% endif %}
         
-        {% if GLOBAL_VARIABLES["DATA_LOADED"] == True %}
+        {% if session["PHASE"] == 3 %}
             <!-- UNIVERSAL TOOLS -->
             <div class="Universal-Tools">
                 <div class="btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-plus-square"><span class="icon-text">Append</span></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showDetails();">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toolsMethod('showDetails');">
                     <i class="bi bi-plus-square-fill"><span class="icon-text">Show Details</span></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-plus-square-fill"></i>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toolsMethod('downloadData');">
+                    <i class="bi bi-download"><span class="icon-text">Download Current Data</span></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toolsMethod('resetData');">
+                    <i class="bi bi-arrow-repeat"><span class="icon-text">Reset Data</span></i>
                     </button>
                 </div>
             </div>
         {% endif %}
         
-        {% for widget in OUTPUT_RESULT %}
-            <!-- VISUALIZATION -->
-            <div class="DITWidget">
-            <div class="DITWidget-Title">
-                <b contenteditable="true">■ {{loop.index}}. {{widget['title']}} </b>
-            </div>
-                <!-- Main Content Here -->
-                {{widget['html'][0]}}
-                {{widget['html'][1]}}
-            
-            <div class="DITWidget-Tools btn-group">
-            <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-dash-circle"><span class="icon-text">Delete</span> </i>
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-download"><span class="icon-text">Download</span></i>
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-question-circle">  <span class="icon-text">Func Info</span></i>
-            </button>
-            </div>
-            </div>
-        {% endfor %}
         
-        {{CONTENT|safe}}
-        <div id="endOfAll"></div>
+        <div id="endOfAll">{{content|safe}}</div>
+        
+        <!-- Modal Create Template -->
+            <div class="modal fade" id="createTemplate" tabindex="-1" role="dialog" aria-labelledby="CreateTemplate" aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Create Dashboard</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true" class="modal-close">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                      <div class="form-group">
+                        <label for="recipient-name" class="col-form-label">Dashboard Name:</label>
+                        <input type="text" class="form-control" id="dashboardName" onFocus="if($('#dashboardName').val()=={{username}}_default){this.value=''}" value="{{username}}_default">
+                      </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="createTrigger();">Create</button>
+                  </div>
+                </div>
+              </div>
+            </div>
         
     </div>
 
-    <script>
+    <script id="mainScript">
         $(function () {
           $('[data-toggle="popover"]').popover()
         });
     
         $('.nav-left-container').on('click','li',function(){
         $(this).find('.glyphicon-menu-right').removeClass('glyphicon-menu-right').addClass('glyphicon-menu-down');
-        $(this).addClass('active').children('.nav-left-container-small').slideDown()
+        $(this).addClass('active').children('.nav-left-container-small').slideDown();
         
         $(this).siblings().removeClass('active').children('.nav-left-container-small').slideUp()
         $(this).siblings().find('.glyphicon-menu-down').removeClass('glyphicon-menu-down').addClass('glyphicon-menu-right');
-        })
+        });
         
         $(document).ready(function() {
           bsCustomFileInput.init()
-        })
+        });
         
         function formSubmit() {
             $('.nav-left-container').css('filter', 'blur(5px)');
@@ -330,16 +279,20 @@
         }
         
         function hideAllFunc(){
-            {% for func in current_func %}
-            $('#FUNC{{loop.index}}').hide();
+            {% set func_i = namespace(value=1) %}
+            {% for tab in current_func %}
+                {% for func in current_func[tab] %}
+                    $('#FUNC{{func_i.value}}').hide();
+                    {% set func_i.value = func_i.value + 1 %}
+                {% endfor %}
             {% endfor %}
         }
         hideAllFunc();
         
-        $("#funcSelector").change(function(){
-                if ($("#funcSelector").val() != "Select A Method..."){
+        $(".funcSelector").change(function(){
+                if ($(this).val() != "Select A Method..."){
                     hideAllFunc();
-                    funcId = "#" + $("#funcSelector").val();
+                    funcId = "#" + $(this).val();
                     $(funcId).show();
                 }
                 else{
@@ -364,21 +317,20 @@
             hideAllFunc();
             $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
             receiveStatus();
-            var form = new FormData(document.getElementById(id));
+            let form = new FormData(document.getElementById(id));
             var request = new XMLHttpRequest();
             request.open("POST", "{{ url_for('use_function', username=username) }}");
             request.send(form);
             
             request.onreadystatechange = function() { 
                 if (request.readyState == 4 && request.status == 200) { 
-                    $('#status').remove();
                     window.location="{{url_for('render_panel_func', username=username)}}";
                 }
             };
         }
         
         function ajaxMethod(id){
-            var form = new FormData(document.getElementById(id));
+            let form = new FormData(document.getElementById(id));
             hideAllFunc();
             $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
             $.ajax({
@@ -394,7 +346,7 @@
                         if(arg.hasOwnProperty("success")){alert(arg["success"])}
                         if(arg.hasOwnProperty("error")){alert(arg["error"])}
                         if(arg.hasOwnProperty("script")){eval(arg["script"])}
-                        if(arg.hasOwnProperty("content")){$('#endOfAll').prepend($(arg["content"]))}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').append($(arg["content"]))}
                 },
                 error:function(e){
                         $('#status').remove();
@@ -410,7 +362,7 @@
                 type:"GET",
                 dataType: 'json',
                 success:function(arg){
-                        if (!(arg.includes(">> End")))
+                        if (!(arg.includes('>> End')))
                         {
                         $('#status').append(arg);
                         console.log(arg);
@@ -428,9 +380,11 @@
             var start_getting = $.ajax(get_status);
         }
         
-        function showDetails(){
-            var form = new FormData();
-            form.append("func-name", "DA.show_details");
+        function toolsMethod(func){
+            const funcname = {'showDetails':"DA.Show Details", 'downloadData':"DA.download", 'resetData':"DA.Reset Data"}
+            let form = new FormData();
+            form.append("func-name", funcname[func]);
+            if(func=='showDetails'){form.append(scale, "100")}
             hideAllFunc();
             $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
             $.ajax({
@@ -446,7 +400,7 @@
                         if(arg.hasOwnProperty("success")){alert(arg["success"])}
                         if(arg.hasOwnProperty("error")){alert(arg["error"])}
                         if(arg.hasOwnProperty("script")){eval(arg["script"])}
-                        if(arg.hasOwnProperty("content")){$('#endOfAll').prepend($(arg["content"]))}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').append($(arg["content"]))}
                 },
                 error:function(e){
                         $('#status').remove();
@@ -459,7 +413,102 @@
             b = '#' + btn_id;
             if(["SELECT", "INPUT"].includes($(b).prev().prev().prop('nodeName'))){$(b).prev().remove()}
         }
-
+        
+        function get_view(template_name){
+            let form = new FormData();
+            form.append("template_name", template_name);
+            $.ajax({
+                url:"{{ url_for('save_template', username=username) }}",
+                type:"post",
+                data:form,
+                dataType: 'json',
+                processData:false,
+                contentType:false,
+                success:function(arg){ 
+                        if(arg.hasOwnProperty("success")){alert(arg["success"])}
+                        if(arg.hasOwnProperty("error")){alert(arg["error"])}
+                        if(arg.hasOwnProperty("script")){eval(arg["script"])}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').append($(arg["content"]))}
+                },
+                error:function(e){
+                        $('#status').remove();
+                        alert("Error Occured");
+                }
+            })
+        }
+        
+        function postStyle(){
+            let resLen = $('#endOfAll').children().length;
+            let res = {}
+            for(let i=0;i<resLen;i++){
+                let id = $('#endOfAll').children()[i].getAttribute("id")
+                let outerStyle = $('#endOfAll').children()[i].getAttribute("style")
+                let changedTitle = $($($('#endOfAll').children()[i]).children()[0]).children()[0].innerHTML
+                let displayContent = $($('#endOfAll').children()[i]).children()[1].getAttribute("style")
+                res[id] = [outerStyle, changedTitle, displayContent]
+            }
+            $.ajax({
+                url:"{{ url_for('save_style', username=username)}}",
+                type:"post",
+                data:JSON.stringify(res),
+                dataType: 'json',
+                processData:false,
+                contentType:'application/json; charset=UTF-8',
+                success:function(arg){ 
+                        if(arg.hasOwnProperty("success")){alert(arg["success"])}
+                        if(arg.hasOwnProperty("error")){alert(arg["error"])}
+                        if(arg.hasOwnProperty("script")){eval(arg["script"])}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').append($(arg["content"]))}
+                },
+                error:function(e){
+                        $('#status').remove();
+                        alert("Error Occured");
+                }
+            })
+            
+        }
+        
+        function closeDiv(result_id){
+            res = {'result_id': result_id}
+            $.ajax({
+                url:"{{ url_for('close_div', username=username)}}",
+                type:"post",
+                data:JSON.stringify(res),
+                dataType: 'json',
+                processData:false,
+                contentType:'application/json; charset=UTF-8',
+                success:function(arg){ 
+                        if(arg.hasOwnProperty("success")){alert(arg["success"])}
+                        if(arg.hasOwnProperty("error")){alert(arg["error"])}
+                        if(arg.hasOwnProperty("script")){eval(arg["script"])}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').append($(arg["content"]))}
+                },
+                error:function(e){
+                        $('#status').remove();
+                        alert("Error Occured");
+                }
+            })
+            
+        }
+        
+        function useModel(username, template_name){
+            hideAllFunc();
+            $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
+            url = "/model/" + str(username) + "/" + str(template_name) + "/";
+            window.location.href = url;
+        }
+        
+        function createTrigger(){
+            id = "#" + "dashboardName";
+            name = $(id).val();
+            if(name==''){alert('Please Enter A Name')}
+            else{get_view(name)}
+        }
+        
+        function closeSession(){
+            url = "/session-clear/" + "{{username}}/";
+            $.get(url, function(result){window.location.href = "{{url_for('login')}}"})
+        }
         
         {{script|safe}}
         

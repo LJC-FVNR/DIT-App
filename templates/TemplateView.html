@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HPB DIT - {{ TITLE|safe }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+    <!-- ../../ -->
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{{url_for('static', filename='css/bootstrap.min.css')}}"/>
+    <!-- main css -->
+    <link rel="stylesheet" href="{{url_for('static', filename='css/Main.css')}}"/>
+    <link rel="stylesheet" href="{{url_for('static', filename='css/Base.css')}}"/>
+    
+    <script src="{{url_for('static', filename='plugins/popper.min.js')}}"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
+    <script charset="utf-8" type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="{{url_for('static', filename='js/bootstrap.bundle.min.js')}}"></script>
+    <!-- plugins -->
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js"
+            crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <ul class="nav-left-container">
+        <nav class="navbar navbar-dark bg-dark" style="padding:0.35rem">
+          <div class="container-fluid">
+            <a class="navbar-brand logo" href="#"/>
+            <img src="{{url_for('static', filename='Pic/Logo_black.png')}}" alt="" width="55" height="44"/>
+            <p>DIT-Dashboard</p>
+            </a>
+          </div>
+        </nav>
+        
+      <li style="list-style: none">
+      </li>
+      
+      <li>
+        <a href="#" id="home">
+          <span>Home</span>
+        </a>
+        <ul class="nav-left-container-small">
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">My Dashboard</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">My Templates</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+        </ul>
+      </li>
+      
+      <li style="list-style: none">
+      </li>
+      
+      <li>
+        <a href="#" id="content">
+          <span>Content</span>
+        </a>
+        <ul class="nav-left-container-small">
+          <li style="list-style: none">
+          </li>
+          {% for result_id in title_dict %}
+          <li>
+            <a class="J_menuItem" href="#{{result_id}}">{{title_dict[result_id]|safe}}</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
+      
+    </ul>
+    <div class="content">
+        <div class="intro text-info dashboard-label">
+            Dashboard
+            <span class="text-muted dashboard-user"> [user: {{username}}]</span>
+            <span class="text-muted dashboard-user"> [created time: {{t}}]</span>
+        </div>
+        <span class="intro dashboard-title">
+        {{ TITLE|safe }}
+        </span>
+        <div id="endOfAll">{{content|safe}}</div>
+        
+    </div>
+
+    <script>
+    {{script|safe}}
+        $(function () {
+          $('[data-toggle="popover"]').popover()
+        });
+    
+        $('.nav-left-container').on('click','li',function(){
+        $(this).find('.glyphicon-menu-right').removeClass('glyphicon-menu-right').addClass('glyphicon-menu-down');
+        $(this).addClass('active').children('.nav-left-container-small').slideDown();
+        
+        $(this).siblings().removeClass('active').children('.nav-left-container-small').slideUp();
+        $(this).siblings().find('.glyphicon-menu-down').removeClass('glyphicon-menu-down').addClass('glyphicon-menu-right');
+        });
+        
+        
+            
+    </script>
+</body>
+
+</html>

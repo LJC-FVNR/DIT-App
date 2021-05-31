@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HPB DIT - {{ TITLE|safe }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+    <!-- ../../ -->
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{{url_for('static', filename='css/bootstrap.min.css')}}"/>
+    <!-- main css -->
+    <link rel="stylesheet" href="{{url_for('static', filename='css/Main.css')}}"/>
+    <link rel="stylesheet" href="{{url_for('static', filename='css/Base.css')}}"/>
+    
+    <script src="{{url_for('static', filename='plugins/popper.min.js')}}"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
+    <script charset="utf-8" type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="{{url_for('static', filename='js/bootstrap.bundle.min.js')}}"></script>
+    <!-- plugins -->
+    <script src="{{url_for('static', filename='plugins/bs-custom-file-input.min.js')}}"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.3.0.min.js"
+            crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <ul class="nav-left-container">
+        <nav class="navbar navbar-dark bg-dark" style="padding:0.35rem">
+          <div class="container-fluid">
+            <a class="navbar-brand logo" href="#"/>
+            <img src="{{url_for('static', filename='Pic/Logo_black.png')}}" alt="" width="55" height="44"/>
+            <p>DIT-PANEL</p>
+            </a>
+          </div>
+        </nav>
+      <li style="list-style: none">
+      </li>
+      <li>
+        <a href="#">
+          <span>Home</span>
+        </a>
+        <ul class="nav-left-container-small">
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="{{url_for('render_panel_func', username=username)}}">My Dashboard</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+          <li>
+            <a class="J_menuItem" href="#">My Templates</a>
+          </li>
+          <li style="list-style: none">
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <div class="content">
+        <div class="my-3 p-3 bg-white rounded shadow-sm">
+            <h6 class="border-bottom border-gray pb-2 mb-0 tm-header">User Template Management</h6>
+            
+            {% for tempname in temp_collection %}
+            <div class="media text-muted pt-3" id="tempCol{{loop.index}}">
+              <div class="media-body pb-3 mb-0 small lh-125 border-bottom border-gray">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                  <strong class="text-gray-dark mr-auto tm-titles">{{tempname}}</strong>
+                  <a href="{{url_for('use_view', username=username, template_name=tempname)}}" class="tm-tools text-info">View</a>
+                  <a href="javascript:useModel('{{username}}', '{{tempname}}');" class="tm-tools text-info">Model</a>
+                </div>
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <span class="d-block tm-times mr-auto">{{temp_collection[tempname]['time']}}</span>
+                    <a href="#" role="button" data-toggle="modal" data-target="#rename{{loop.index}}" class="tm-tools text-info">Rename</a>
+                    <a href="#" role="button" data-toggle="modal" data-target="#delete{{loop.index}}" class="tm-tools text-info">Delete</a>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Modal Rename -->
+            <div class="modal fade" id="rename{{loop.index}}" tabindex="-1" role="dialog" aria-labelledby="Rename" aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Rename [{{tempname}}]</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true" class="modal-close">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                      <div class="form-group">
+                        <label for="recipient-name" class="col-form-label">New Name:</label>
+                        <input type="text" class="form-control" id="renameName{{loop.index}}">
+                      </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="renameTrigger('#renameName{{loop.index}}', '{{tempname}}');">Rename</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Modal Delete -->
+            <div class="modal fade" id="delete{{loop.index}}" tabindex="-1" role="dialog" aria-labelledby="Delete" aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Are you sure to delete [{{tempname}}]?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true" class="modal-close">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    -
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteTrigger('{{tempname}}', '{{loop.index}}')">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}            
+          </div>
+          <div id="endOfAll"></div>
+    </div>
+    
+    
+    
+    <script>
+        $(function () {
+          $('[data-toggle="popover"]').popover()
+        });
+    
+        $('.nav-left-container').on('click','li',function(){
+        $(this).find('.glyphicon-menu-right').removeClass('glyphicon-menu-right').addClass('glyphicon-menu-down');
+        $(this).addClass('active').children('.nav-left-container-small').slideDown();
+        
+        $(this).siblings().removeClass('active').children('.nav-left-container-small').slideUp();
+        $(this).siblings().find('.glyphicon-menu-down').removeClass('glyphicon-menu-down').addClass('glyphicon-menu-right');
+        });
+
+        
+        function renameTrigger(id, oldName){
+            newName = $(id).val()
+            if(newName==''){alert('Dashboard Name Cannot Be None')}
+            url = "/template_rename/" + "{{username}}/" + oldName + "/" + newName +"/"
+            $.get(url, function(result){alert('Successfully Renamed')})
+            }
+        
+        function deleteTrigger(tempname, id){
+            url = "/template_delete/" + "{{username}}/" + tempname + "/"
+            did = '#delete' + String(id)
+            sid = '#tempCol' + String(id)
+            $.get(url, function(result){$(did).modal('hide'); $(sid).remove();})
+            }
+            
+        function useModel(username, template_name){
+            $("#endOfAll").prepend('<div class="alert alert-dark error col-lg-9 overflow-auto" role="alert" id="status" style="height:10rem">Running -> </div>');
+            receiveStatus();
+            url = "/model/" + String(username) + "/" + String(template_name) + "/";
+            $.get(url, function(result){alert('Success'); window.location.href = "{{url_for('render_panel_func', username=username)}}";})
+        }
+        
+        function receiveStatus(){
+            var get_status = {
+                url:"{{ url_for('sending', username=username) }}",
+                type:"GET",
+                dataType: 'json',
+                success:function(arg){
+                        if (!(arg.includes(">> End")))
+                        {
+                        $('#status').append(arg);
+                        console.log(arg);
+                        $.ajax(get_status);
+                        }
+                        else{
+                        $('#status').append(arg);
+                        $('#status').remove();
+                        }
+                },
+                error:function(e){
+                        $.ajax(get_status);
+                }
+                }
+            var start_getting = $.ajax(get_status);
+        }
+    </script>
+</body>
+
+</html>
