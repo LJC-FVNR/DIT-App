@@ -6,16 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
     <!-- ../../ -->
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="../../static/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css"/>
     <!-- main css -->
-    <link rel="stylesheet" href="../../static/css/Main.css"/>
-    <link rel="stylesheet" href="../../static/css/Base.css"/>
+    <link rel="stylesheet" href="/static/css/Main.css"/>
+    <link rel="stylesheet" href="/static/css/Base.css"/>
     <script src="../../static/plugins/popper.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css">
     <script charset="utf-8" type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="../../static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
     <!-- plugins -->
-    <script src="../../static/plugins/bs-custom-file-input.min.js"></script>
+    <script src="/static/plugins/bs-custom-file-input.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-2.3.0.min.js"
         crossorigin="anonymous"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.0.min.js"
@@ -66,12 +66,12 @@
           <li style="list-style: none">
           </li>
           <li>
-            <a class="J_menuItem" href="{{url_for('template_management', username=username)}}">My Dashboard</a>
+            <a class="J_menuItem" href="{{url_for('template_management', username=username)}}">My Dashboards</a>
           </li>
           <li style="list-style: none">
           </li>
           <li>
-            <a class="J_menuItem" href="">User Settings</a>
+            <a class="J_menuItem" href="/panel/{{username}}/">My Panel</a>
           </li>
           <li style="list-style: none">
           </li>
@@ -160,6 +160,7 @@
             <div class="alert alert-warning error col-lg-9" role="alert">
                 To Use the Data Analysis Tookits, Please Registrate Your Data with the Method "DA.Initialize" 
             {% else %}
+            <div>
             {% endif %}
             </div>
         {% endif %}
@@ -208,9 +209,9 @@
             <div class="Universal-Tools">
                 <div class="btn-group">
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toolsMethod('showDetails');">
-                    <i class="bi bi-plus-square-fill"><span class="icon-text">Show Details</span></i>
+                    <i class="bi bi-plus-square-fill"><span class="icon-text">Show Details of Current Data</span></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toolsMethod('downloadData');">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadCurrentData();">
                     <i class="bi bi-download"><span class="icon-text">Download Current Data</span></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toolsMethod('resetData');">
@@ -346,7 +347,8 @@
                         if(arg.hasOwnProperty("success")){alert(arg["success"])}
                         if(arg.hasOwnProperty("error")){alert(arg["error"])}
                         if(arg.hasOwnProperty("script")){eval(arg["script"])}
-                        if(arg.hasOwnProperty("content")){$('#endOfAll').append($(arg["content"]))}
+                        if(arg.hasOwnProperty("content")){$('#endOfAll').append($(arg["content"]))
+                        }
                 },
                 error:function(e){
                         $('#status').remove();
@@ -381,7 +383,7 @@
         }
         
         function toolsMethod(func){
-            const funcname = {'showDetails':"DA.Show Details", 'downloadData':"DA.download", 'resetData':"DA.Reset Data"}
+            const funcname = {'showDetails':"DA.Show Details", 'resetData':"DA.Reset Data"}
             let form = new FormData();
             form.append("func-name", funcname[func]);
             if(func=='showDetails'){form.append(scale, "100")}
@@ -439,13 +441,18 @@
         
         function postStyle(){
             let resLen = $('#endOfAll').children().length;
-            let res = {}
+            let res = {};
             for(let i=0;i<resLen;i++){
-                let id = $('#endOfAll').children()[i].getAttribute("id")
-                let outerStyle = $('#endOfAll').children()[i].getAttribute("style")
-                let changedTitle = $($($('#endOfAll').children()[i]).children()[0]).children()[0].innerHTML
-                let displayContent = $($('#endOfAll').children()[i]).children()[1].getAttribute("style")
-                res[id] = [outerStyle, changedTitle, displayContent]
+                let id = $('#endOfAll').children()[i].getAttribute("id");
+                let outerStyle = $('#endOfAll').children()[i].getAttribute("style");
+                let changedTitle = $($($('#endOfAll').children()[i]).children()[0]).children()[0].innerHTML.replace(/(?:\r\n|\r|\n)/g, "<br>");
+                let displayContent = $($('#endOfAll').children()[i]).children()[1].getAttribute("style");
+                if($($('#endOfAll').children()[i]).hasClass('noteResult')){
+                var noteContent = $($($('#endOfAll').children()[i]).children()[1]).children()[0].innerHTML.replace(/(?:\r\n|\r|\n)/g, "<br>");
+                }else{
+                var noteContent = "";
+                }
+                res[id] = [outerStyle, changedTitle, displayContent, noteContent];
             }
             $.ajax({
                 url:"{{ url_for('save_style', username=username)}}",
@@ -510,8 +517,27 @@
             $.get(url, function(result){window.location.href = "{{url_for('login')}}"})
         }
         
-        {{script|safe}}
         
+        function moveForward(div_id){
+            url = '/move-forward/' + String(div_id) + '/up/'
+            $.ajaxSettings.async = false;
+            $.get(url, function(result){});
+            $.ajaxSettings.async = true;
+        }
+        
+        function moveAfterward(div_id){
+            url = '/move-afterward/' + String(div_id) + '/down/'
+            $.ajaxSettings.async = false;
+            $.get(url, function(result){});
+            $.ajaxSettings.async = true;
+        }
+        
+        function downloadCurrentData(){
+            url = "/get-result-file/" + "{{username}}/";
+            window.location.href = url;
+        }
+        
+        {{script|safe}}
     </script>
 </body>
 

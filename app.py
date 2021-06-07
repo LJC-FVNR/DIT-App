@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, make_response
 from flask_session import Session
-from flask import g
+from redis import Redis
+from urllib.parse import unquote
 import pandas as pd
 from werkzeug.utils import secure_filename
 import os
 from Processing import Processor
-from file_ops import USER, file_name_listdir, TemplateExternalReader
+from file_ops import USER, file_name_listdir, TemplateExternalReader, getFileSize
 import json
 import sys
 from fuzzywuzzy import fuzz
@@ -27,18 +28,21 @@ response.headers['X-Content-Type-Options'] = 'nosniff'
 '''
 pd.set_option('display.max_rows', None)
 
+app.config['Debug'] = False
+
 app.config['SECRET_KEY'] = "*(%-4pqnn(^(#$#8173"
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['SESSION_PERMANENT'] = False 
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_REDIS'] = Redis()
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
-# app.config['SESSION_FILE_THRESHOLD'] = 500
-app.config['SESSION_PERMANENT'] = True
-
+app.config['REDIS_URL'] = 'redis://localhost:6379/1'
 
 Session = Session()
 Session.init_app(app=app)
 from flask import session
+
 
 # ----------Global Variables----------
 '''
@@ -50,7 +54,7 @@ CONTENT_CACHE, SCIPRT_CACHE: for saving elements
 	-> session['cached_content'] & session['cached_script']
 '''
 
-TOOLS = ['close', 'hide', 'show', 'reset', 'info']
+TOOLS = ['close', 'hide', 'show', 'reset', 'up', 'down', 'info']
 
 GLOBAL_SENDING = {} # use a global sending dict to store the status update info for each requirement
 std_temp = sys.stdout
@@ -75,6 +79,7 @@ def catch_all(path):
 @app.route('/')
 def login():
     session.clear()
+    session.permanent = False
     session["DATA_LOADED"] = False
     session["DATA_REGISTRATED"] = False
     session["WARNING"] = []
@@ -93,17 +98,20 @@ def login():
 
 @app.route('/panel-file', methods=['POST', 'GET'])
 def login_username():
-    session['username'] = request.form['username']
-    session['user'] = USER(session['username'])
-    user = session['user']
-    session['UPLOAD_FOLDER'] = f'static/user/{user.username}/data/'
-    gsid = session['username']
-    GLOBAL_SENDING[gsid] = []
-    session['APP_PRINT'] = Send_MSG(gsid)
-    SCRIPT, CONTENT = session.get('SCRIPT'), session.get('CONTENT')
-    return render_template('Template.html', TITLE="Panel", session=session, data=user.data, 
-                           current_func=user.get_func_settings(session['PHASE']), form_func_input_html=form_func_input_html,
-                           username=session['username'], script=SCRIPT, content=CONTENT, get_panel=get_panel)
+    if request.form['username'] in ['ljiechen']:
+        session['username'] = request.form['username']
+        session['user'] = USER(session['username'])
+        user = session['user']
+        session['UPLOAD_FOLDER'] = f'static/user/{user.username}/data/'
+        gsid = session['username']
+        GLOBAL_SENDING[gsid] = []
+        session['APP_PRINT'] = Send_MSG(gsid)
+        SCRIPT, CONTENT = session.get('SCRIPT'), session.get('CONTENT')
+        return render_template('Template.html', TITLE="Panel", session=session, data=user.data, 
+                               current_func=user.get_func_settings(session['PHASE']), form_func_input_html=form_func_input_html,
+                               username=session['username'], script=SCRIPT, content=CONTENT, get_panel=get_panel)
+    else:
+        return redirect(url_for('login'))
 
 # -------------------------------- Main Panel -----------------------------------
 
@@ -133,7 +141,7 @@ def upload_excel(username):
 @app.route("/panel-data/<username>/", methods=['POST', 'GET'])
 def choose_data(username):
     user = session['user']
-    filelink, filename = request.form['filelink'].split("|")[0], request.form['filelink'].split("|")[1]
+    filelink, filename = unquote(request.form['filelink'].split("|")[0]), unquote(request.form['filelink'].split("|")[1])
     session['cached_tempform']['data_path'] = filelink
     session['cached_tempform']['data_name'] = filename
     data = pd.read_excel(filelink)
@@ -151,9 +159,9 @@ def choose_data(username):
 
 @app.route("/status/<username>/",methods=["GET"])
 def sending(username):
-    while len(GLOBAL_SENDING[username]) == 0:
+    while len(GLOBAL_SENDING.get(username)) == 0:
         time.sleep(1)
-    current = GLOBAL_SENDING[username]
+    current = GLOBAL_SENDING.get(username)
     GLOBAL_SENDING[username] = []
     return jsonify(current)
 
@@ -164,8 +172,6 @@ def use_function(username):
             redirect(url_for('login_username'))
         else:
             redirect(url_for('login'))
-    processor = session.get('processor')
-    pb_data = session.get('pb_data')
     if session.get("PHASE") == 1:
         data = session.get('data')
     user = session['user']
@@ -258,11 +264,15 @@ def use_function(username):
         print('>> End')
         session['RESULT_INDEX_ID'] = session['RESULT_INDEX_ID'] - 1             # increase global result index here to record not only the results with returning divs
         traceback.print_exc()
-        return jsonify({'error': 'Error occured'})
+        return jsonify({'error': f'Error occured [{e.__class__.__name__}: {e}]'})
     # APP_PRINT.reset()
 
 @app.route("/panel/<username>/", methods=['GET'])
 def render_panel_func(username):
+    if session.get("PHASE") == 2:
+        session.pop('data', None)
+    if session.get("PHASE") == 3:
+        session.pop('processor', None)
     user = session['user']
     current_func = user.get_func_settings(session['PHASE'])
     CONTENT, SCRIPT = get_cache()
@@ -271,6 +281,37 @@ def render_panel_func(username):
                            current_func=current_func,username=username,form_func_input_html=form_func_input_html, 
                            script=SCRIPT, content=CONTENT, get_panel=get_panel)
 
+@app.route("/move-forward/<result_id>/<direct>/", methods=['GET'])
+def result_move(result_id, direct):
+    result_id = int(result_id[6:])
+    if direct == 'forward':
+        session['cached_tempform'] = move_forward(result_id, session['cached_tempform'])
+    elif direct == 'afterward':
+        session['cached_tempform'] = move_afterward(result_id, session['cached_tempform'])
+    return jsonify({'success': 'Moved'})
+
+@app.route("/get-result-file/<username>/")
+def output_file(username, form='xlsx'):
+    import io
+    from urllib.parse import quote
+    now = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    out = io.BytesIO()
+    writer = pd.ExcelWriter(out, engine='xlsxwriter')
+    session['pb_data'].latest_query.to_excel(excel_writer=writer, sheet_name='Sheet1', index=False)
+    writer.save()
+    writer.close()
+    file_name = quote(f"{session['pb_data'].name}_{now}.xlsx")
+    response = make_response(out.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename*=utf-8''{}".format(file_name)
+    response.headers["Content-type"] = "application/x-xlsx"
+    return response
+
+@app.route("/session-clear/<username>/", methods=['GET'])
+def clear_session(username):
+    session.clear()
+    return jsonify({'success': 'Session Closed'})
+
+# ----------------- template module -------------------
 @app.route("/save-template/<username>/", methods=['POST'])
 def save_template(username):
     form = request.form
@@ -298,7 +339,7 @@ def save_style(username):
     style = request.get_json()
     session['cached_style'] = style
     return jsonify({'success': 'Layout Saved'})
-    
+
 @app.route("/view/<username>/<template_name>/", methods=['GET'])
 def use_view(username, template_name):
     uv = TemplateExternalReader(username)
@@ -313,12 +354,16 @@ def use_view(username, template_name):
 @app.route("/model/<username>/<template_name>/", methods=['GET'])
 def use_model(username, template_name):
     session.clear()
+    session.permanent = False
     initialize_model(username)
     uv = TemplateExternalReader(username)
     model, layout, t, layout_dict = uv.get_template_model(template_name)
     session['cached_style'] = layout_dict
     filelink, filename = model['data_path'], model['data_name']
     data = pd.read_excel(filelink)
+    session['cached_tempform'] = collections.OrderedDict()     # [step1(form1), step2, step3, ...]
+    session['cached_tempform']['data_path'] = model['data_path']
+    session['cached_tempform']['data_name'] = model['data_name']
     session['data'] = data
     session['DATA_NAME'] = filename
     session["DATA_LOADED"] = True
@@ -335,7 +380,8 @@ def template_management(username):
     user = session['user']
     temp_collection = user.user_template_management()
     title = f"User Management - {username}"
-    return render_template('TempMgt.html', TITLE=title, temp_collection=temp_collection, username=username)
+    return render_template('TempMgt.html', TITLE=title, temp_collection=temp_collection, 
+                           username=username, getFileSize=getFileSize)
 
 @app.route("/template_rename/<username>/<template_name>/<template_new_name>/", methods=['GET'])
 def template_rename(username, template_name, template_new_name):
@@ -348,12 +394,6 @@ def template_delete(username, template_name):
     user = session['user']
     user.template_delete(template_name)
     return jsonify({'success': 'Template Deleted'})
-
-@app.route("/session-clear/<username>/", methods=['GET'])
-def clear_session(username):
-    session.clear()
-    return jsonify({'success': 'Session Closed'})
-
 
 # ----------------------------- User Management ----------------------------
 
@@ -370,7 +410,6 @@ def initialize_model(username):
     session['CONTENT'] = ''
     session['cached_content'] = {}
     session['cached_script'] = {}
-    session['cached_tempform'] = collections.OrderedDict()     # [step1(form1), step2, step3, ...]
     session['cached_style'] = None
     session['username'] = username
     session['user'] = USER(session['username'])
@@ -380,55 +419,66 @@ def initialize_model(username):
     session['APP_PRINT'] = Send_MSG(username)
 
 def use_func(parameter_presaved):
-    processor = session.get('processor')
-    pb_data = session.get('pb_data')
     if session["PHASE"] == 1:
         data = session.get('data')
-    if session["PHASE"] == 3:
-        processor = session.get('pb_data').processor
     user = session['user']
     func_class, func_name, para_list, form = parameter_presaved[0], parameter_presaved[1], parameter_presaved[2], parameter_presaved[3]
     parameters = {}
+    para_presaved = {}
     for p in para_list:
         # p: current_parameter_key
         if str(form[p]).strip() == 'None':
             parameters[p] = None
+            para_presaved[p] = 'None'
         else:
             current_input_type = user.info['settings']['func_settings'][func_class][func_name]['parameters'][p][2][0]
             if current_input_type == 'immutable':
                 if user.info['settings']['func_settings'][func_class][func_name]['parameters'][p][2][1] == 'eval':
                     parameters[p] = eval(form[p])
+                    para_presaved[p] = form[p]
                 elif user.info['settings']['func_settings'][func_class][func_name]['parameters'][p][2][1] == 'text':
                     parameters[p] = str(form[p])
+                    para_presaved[p] = str(form[p])
             elif current_input_type == 'choose_dir':
                     parameters[p] = str(form[p])
+                    para_presaved[p] = str(form[p])
             elif current_input_type == 'json_edible':
                     parameters[p] = json.loads(form[p])
+                    para_presaved[p] = form[p]
             elif current_input_type == 'text_edible':
                 if user.info['settings']['func_settings'][func_class][func_name]['parameters'][p][2][2] == 'eval':
                     parameters[p] = eval(form[p])
+                    para_presaved[p] = form[p]
                 elif user.info['settings']['func_settings'][func_class][func_name]['parameters'][p][2][2] in ('text', 'eval_pre'):
                     parameters[p] = str(form[p])
+                    para_presaved[p] = str(form[p])
             elif current_input_type == 'choose':
                 parameters[p] = eval(form[p])
+                para_presaved[p] = form[p]
             elif current_input_type == "checks":
                 parameters[p] = form.get(p)
+                para_presaved[p] = form.get(p)
             elif current_input_type == "choose_append":
                 parameters[p] = form.get(p)
+                para_presaved[p] = form.get(p)
             elif current_input_type == "floating_choose":
                 key_value = form.get(p)
+                para_presaved[p] = form.get(p)
                 for kv in key_value:
                     k, v = kv.split(":")
                     parameters[k] = v
             elif current_input_type == "text_append":
                 parameters[p] = form.get(p)
+                para_presaved[p] = form.get(p)
             elif current_input_type == "choose_eval":
                 if user.info['settings']['func_settings'][func_class][func_name]['parameters'][p][2][1] == 'eval':
                     parameters[p] = eval(form[p])
+                    para_presaved[p] = form.get(p)
                 elif user.info['settings']['func_settings'][func_class][func_name]['parameters'][p][2][1] in ('text', 'eval_pre'):
                     parameters[p] = str(form[p])
+                    para_presaved[p] = str(form.get(p))
     session['RESULT_INDEX_ID'] = session['RESULT_INDEX_ID'] + 1             # increase global result index here to record not only the results with returning divs
-    session['cached_tempform'][session['RESULT_INDEX_ID']] = [func_class, func_name, para_list, parameters]
+    session['cached_tempform'][session['RESULT_INDEX_ID']] = [func_class, func_name, para_list, para_presaved]
     try:
         # registrate the processor
         call = user.info['settings']['func_settings'][func_class][func_name]["call"]
@@ -471,11 +521,15 @@ def get_cached_layout():
         for i in session['cached_style']:
             result_id = str(i)
             outerStyle = session['cached_style'][i][0]
-            changedTitle = session['cached_style'][i][1]
-            displayContent = session['cached_style'][i][2]
+            changedTitle = session['cached_style'][i][1].replace("'", "") if type(session['cached_style'][i][1]) is str else session['cached_style'][i][1]
+            displayContent = session['cached_style'][i][2].replace("'", "") if type(session['cached_style'][i][2]) is str else session['cached_style'][i][2]
+            noteContent = session['cached_style'][i][3].replace("'", "") if type(session['cached_style'][i][3]) is str else session['cached_style'][i][3]
+            
             style_script += f"$('#{result_id}').attr('style', '{outerStyle}');"
             style_script += f"$($('#{result_id}').children()[0]).children()[0].innerHTML = '{changedTitle}';"
             style_script += f"$($('#{result_id}').children()[1]).attr('style', '{displayContent}');"
+            style_script += f"$($('#{result_id}').children()[1]).children()[0].innerHTML = '{noteContent}';" if noteContent != '' else ''
+            
         return style_script
     else:
         return ""
@@ -554,8 +608,6 @@ def get_panel(session):
     
 
 def form_func_input_html(parameters, name, index, outer_index):
-    processor = session.get('processor')
-    pb_data = session.get('pb_data')
     if session["PHASE"] == 1:
         data = session['data']
     user = session['user']
@@ -791,48 +843,56 @@ def form_func_input_html(parameters, name, index, outer_index):
                     <button class="btn btn-outline-secondary" id="btn_del_{name}{outer_index}" type="button" onclick="deleteElement('btn_{name}{outer_index}')">Delete</button>
                 </div>
             """
-    if session.get("PHASE") == 2:
-        session.pop('data', None)
-    if session.get("PHASE") == 3:
-        session.pop('processor', None)
     return output_html
 
-def format_result(title, script, div, tools:list, popover="", outerStyle="", changedTitle="", displayContent=""):
+def format_result(title, script, div, tools:list, popover="", outerStyle="", changedTitle="", displayContent="", outerClass=""):
     title = "■ " + title + " "
     div_id = 'result'+str(session['RESULT_INDEX_ID'])
     # title: "t", script, div, tools: ['delete', 'download', 'funcinfo']}
     close = f"""
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_close_{session['RESULT_INDEX_ID']}" onclick="$(this).parent().parent().remove();closeDiv({session['RESULT_INDEX_ID']});">
-               <i class="bi bi-x-circle"><span class="icon-text">Close</span> </i>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_close_{session['RESULT_INDEX_ID']}" onclick="$(this).parent().parent().remove();closeDiv({session['RESULT_INDEX_ID']});" >
+               <span data-toggle="popover" data-placement="top" data-content="delete this result" data-trigger="hover" >×</span>
             </button>
             """ if 'close' in tools else ""
             
     hide = f"""
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_hide_{session['RESULT_INDEX_ID']}" onclick="$(this).parent().prev().hide()">
-                <i class="bi bi-dash-circle"><span class="icon-text">Hide</span></i>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_hide_{session['RESULT_INDEX_ID']}" onclick="$(this).parent().prev().hide()" >
+                <span data-toggle="popover" data-placement="top" data-content="hide content" data-trigger="hover">-</span>
                 </button>
             """ if 'hide' in tools else ""
             
     show = f"""
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_show_{session['RESULT_INDEX_ID']}"  onclick="$(this).parent().prev().show()">
-                <i class="bi bi-plus-circle">  <span class="icon-text">Show</span></i>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_show_{session['RESULT_INDEX_ID']}"  onclick="$(this).parent().prev().show()" >
+                <span data-toggle="popover" data-placement="top" data-content="show content" data-trigger="hover">+</span>
             </button>
         """ if 'show' in tools else ""
         
     reset = f"""
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_reset_{session['RESULT_INDEX_ID']}"  onclick="$(this).parent().parent().removeAttr('style');">
-                <i class="bi bi-arrow-counterclockwise"> <span class="icon-text">Reset</span></i>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_reset_{session['RESULT_INDEX_ID']}"  onclick="$(this).parent().parent().removeAttr('style');" >
+                <span data-toggle="popover" data-placement="top" data-content="reset layout" data-trigger="hover">↻</span>
             </button>
         """ if 'reset' in tools else ""
         
+    up = f"""
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_up_{session['RESULT_INDEX_ID']}"  onclick="moveForward('{div_id}');$('#{div_id}').insertBefore($('#{div_id}').prev());" >
+                <span data-toggle="popover" data-placement="top" data-content="move up" data-trigger="hover">↑</span>
+            </button>
+        """ if 'up' in tools else ""
+    
+    down = f"""
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_down_{session['RESULT_INDEX_ID']}"  onclick="moveAfterward('{div_id}');$('#{div_id}').insertAfter($('#{div_id}').next());" >
+                <span data-toggle="popover" data-placement="top" data-content="move down" data-trigger="hover">↓</span>
+            </button>
+        """ if 'down' in tools else ""
+
     info = f"""
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_info_{session['RESULT_INDEX_ID']}"  data-container="body" data-toggle="popover" data-placement="top" data-content="{popover}" onclick="$(this).popover('show')">
-                <i class="bi bi-info-circle">  <span class="icon-text">Info</span></i>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn_result_info_{session['RESULT_INDEX_ID']}" onclick="$(this).popover('show')" >
+                <span data-toggle="popover" data-placement="top" data-content="{popover}" data-trigger="hover"><i style="font-style:italic">i</i></span>
             </button>
         """ if 'info' in tools else ""
 
     tools=f'''
-            {close}{hide}{show}{reset}{info}
+            {up}{down}{hide}{show}{reset}{info}{close}
     '''
     
     if outerStyle != "":
@@ -844,10 +904,10 @@ def format_result(title, script, div, tools:list, popover="", outerStyle="", cha
         
     title_head = f"""<div class="DITWidget-Title">
                 <b contenteditable="true">{title}</b>
-        </div>""" if title != "" else ""
+        </div>"""
     
     html = f"""
-    <div class="DITWidget" id="{div_id}" {outerStyle}>
+    <div class="DITWidget {outerClass}" id="{div_id}" {outerStyle}>
         {title_head}
         <!-- Main Content Here -->
         <div class="main-content m-auto" {displayContent}>
@@ -861,3 +921,28 @@ def format_result(title, script, div, tools:list, popover="", outerStyle="", cha
     """
     return html
 
+def move_forward(key, ordered_dict):
+    keys = list(ordered_dict.keys())
+    index = keys.index(key)
+    if index == 3:
+        return ordered_dict
+    prev = keys[index-1]
+    after = keys[index+1:] 
+    move = [prev] + after
+    ordered_dict.move_to_end(key)
+    for ik in move:
+        ordered_dict.move_to_end(ik)
+    return ordered_dict
+
+def move_afterward(key, ordered_dict):
+    keys = list(ordered_dict.keys())
+    index = keys.index(key)
+    if index == len(key)-1:
+        return ordered_dict
+    next_one = keys[index+1]
+    after_next = keys[index+1:] 
+    ordered_dict.move_to_end(next_one)
+    ordered_dict.move_to_end(key)
+    for ik in after_next:
+        ordered_dict.move_to_end(ik)
+    return ordered_dict

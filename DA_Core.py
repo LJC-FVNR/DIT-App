@@ -56,6 +56,7 @@ class PB_Data:
         name: data name
         **kwargs: positioning the columns of key requirements
         '''
+        self.name = name
         self.processor = processor
         data = processor.data
         self.reset_data = copy.deepcopy(data)
@@ -71,6 +72,7 @@ class PB_Data:
         self.set_data(data, universal_label)
         self.set_time(time_series)
         self.set_category()
+        self.latest_query = copy.deepcopy(self.data)
         
     def reset(self):
         self.data = self.reset_data
@@ -88,6 +90,7 @@ class PB_Data:
             if self.data[ts].dtype.name not in ['object', 'category']:
                 self.data[ts] = self.data[ts].astype('Int64')
         self.data['Time_Series'] = eval("+".join([f'self.data["{i}"].astype("str")' for i in time_series]))
+        print(">> Time Series Settled")
         self.classification.append('Time_Series')
         
     def set_type(self, type_map):
@@ -124,7 +127,6 @@ class PB_Data:
         self.data = data
         self.data['combinatorial_queries'] = self.data.iloc[:, 0].map(lambda x: '')
         self.classification.append('combinatorial_queries')
-        self.latest_query = copy.deepcopy(self.data)
         self.universal_label = universal_label
         return self
     
@@ -232,7 +234,7 @@ class PB_Data:
         diff = [max_len-len(left), max_len-len(mid), max_len-len(right)]
         left, mid, right = left+diff[0]*[''], mid+diff[1]*[''], right+diff[2]*[''],
         query_list = list(zip(left, mid, right))
-        print(query_list)
+        print('query_list: {}'.format(query_list))
         '''
         query_list: [[and, or, not], [and, or, not], ...]
         '''
@@ -246,9 +248,10 @@ class PB_Data:
                 query_name = " | ".join(ql)
                 q_index = self.query_by(kw_and=ql[0], kw_or=ql[1], kw_not=ql[2], attr=attr).index
                 q_data.loc[:, 'combinatorial_queries'] = q_data.apply(lambda x: x['combinatorial_queries']+query_name if x.name in q_index else x['combinatorial_queries'], axis=1)
-        self.latest_query = copy.deepcopy(q_data)
         if show_overall == False:
             self.latest_query = copy.deepcopy(q_data[q_data['combinatorial_queries'] != ''])
+        else:
+            self.latest_query = copy.deepcopy(q_data)
         self.data['combinatorial_queries'] = self.data.iloc[:, 0].map(lambda x: '')
         return self.latest_query
     
@@ -605,23 +608,32 @@ class PB_Data:
             stci.get_heatmap(cmap=color_map[color_control], sub=(ci.index[:], ci.columns[-1]))
             stci.get_heatmap(cmap=color_map[color_control], sub=(ci.index[-1], ci.columns[:]))
             color_control = color_on_change(color_control)
-        
         # format text 
-        formatting = self.get_format(values[0], percentage)
+        formatting = self.get_table_format(values[0], percentage)
         
         title = f"Breakdown of {', '.join(feature_name)} | Current Data Range: {self.universal_label}"
         ex = f'stci.format(formatting).set_caption("{title}")'
         exec(ex)
         return stci
     
+    def get_table_format(self, feature, percentage=False):
+        formatting = ""
+        if feature in self.config_currency:
+            formatting = '${0:,.0f}'
+        else:
+            formatting = '{:.2f}'
+        if percentage:
+            formatting = '{:.2%}'
+        return formatting
+    
     def get_format(self, feature, percentage=False, brace=True):
         formatting = ""
         if feature in self.config_currency:
             formatting = '{$0:,f}' if brace else '$0:,f'
         else:
-            formatting = '{:.2f}' if brace else '.2f'
+            formatting = '{0.1f}' if brace else '0.1f'
         if percentage:
-            formatting = '{:.2%}' if brace else '.2%'
+            formatting = '{%0.2f}' if brace else '%0.2f'
         return formatting
     
     def draw_feature_distribution_scatter(self, feature:str, performance='product_cogs_amt', ddata=None):
@@ -655,7 +667,7 @@ class PB_Data:
 
         return p
     
-    def draw_feature_time_seires_heatmap(self, feature:str, time_series=['Time_Series'], performance='product_cogs_amt', data=None, cmap=["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]):
+    def draw_feature_time_seires_heatmap(self, feature:str, time_series=['Time_Series'], performance='product_cogs_amt', agg='sum', data=None, cmap=["#75968f", "#a5bab7", "#c9d9d3", "#e2e2e2", "#dfccce", "#ddb7b1", "#cc7878", "#933b41", "#550b1d"]):
         from holoviews import opts
         from random import choice
         from bokeh.models import NumeralTickFormatter
@@ -673,7 +685,17 @@ class PB_Data:
         data = copy.deepcopy(data[time_series+[performance]+[feature]])
         data.replace([np.inf, -np.inf], np.nan, inplace=True)
         data.dropna(inplace=True)
-        draw = data[['Time_Series', feature, performance]].groupby(by=['Time_Series', feature]).agg('sum').reset_index()
+        
+        if agg == 'sum':
+            agg_func = np.sum
+        elif agg == 'mean':
+            agg_func = np.mean
+        elif agg == 'max':
+            agg_func = np.max
+        elif agg == 'min':
+            agg_func = np.min
+            
+        draw = data[['Time_Series', feature, performance]].groupby(by=['Time_Series', feature]).agg(agg_func).reset_index()
 
         formatting = self.get_format(performance, brace=False)
         formatting_b = self.get_format(performance, brace=True)
@@ -712,7 +734,7 @@ class PB_Data:
 
         return hv.render(overlay)
     
-    def draw_feature_scatter(self, data=None, x:str='marketplace', y:str='ops', cate:str='hdl_classification'):
+    def draw_feature_scatter(self, data=None, x:str='marketplace', y:str='ops', agg='sum', cate:str='hdl_classification'):
         from holoviews import dim, opts
         import holoviews as hv
         from bokeh.models import NumeralTickFormatter
@@ -734,8 +756,17 @@ class PB_Data:
                 select += [f'(data["{i}"]=="{x[i]}")']
             select = "&".join(select)
             return data[eval(select)][asin].nunique()
-
-        data_draw = data.groupby(by=by)[ext].agg('sum').reset_index()
+        
+        if agg == 'sum':
+            agg_func = np.sum
+        elif agg == 'mean':
+            agg_func = np.mean
+        elif agg == 'max':
+            agg_func = np.max
+        elif agg == 'min':
+            agg_func = np.min
+            
+        data_draw = data.groupby(by=by)[ext].agg(agg_func).reset_index()
         data_draw['asin_counter'] = data_draw.apply(asin_counter, axis=1)
         key_dimensions   = [(y, y), (cate, cate)]
         value_dimensions = [(x, x), ('asin_counter', 'asin_counter')]
@@ -788,7 +819,7 @@ class PB_Data:
         except:pass
         return d
     
-    def show_details(self, sdata=None, scale=100):
+    def show_details(self, sdata=None, scale=50):
         if sdata is None:
             sdata = self.latest_query
         d = sdata.head(scale).style.render()
@@ -807,8 +838,8 @@ class PB_Data:
         a, b= self.processor.co_occurence(scale=word_scale)
         word_set = set([i for i in np.array(a)[:, 0]])
         count = pd.DataFrame(a)
-        self.processor.bag_of_word() # get word index and process doc vectors
-        word_index = [i for i in self.processor.sub_pos]
+        BaggingVector, sub_pos = self.processor.bag_of_word() # get word index and process doc vectors
+        word_index = [i for i in sub_pos]
         # identify topics and corresponding colors
         print('\n>> Identifying Topics...')
         N = n_topics
@@ -818,26 +849,26 @@ class PB_Data:
         else:
             colors = int(N/10) * colors + colors[0:(N%10)]
         model = NMF(n_components=N, init='random', random_state=0)
-        X = self.processor.data["BaggingVector"].to_list()
+        X = BaggingVector.to_list()
         W = model.fit_transform(X)
         H = model.components_
-        self.processor.data['Topic'] = pd.Series(np.argmin(W, axis=1))
+        self.data['Topic'] = pd.Series(np.argmin(W, axis=1))
         word_topic = np.argmin(H, axis=0)
         
         # generate position (x,y) of nodes
         print('\n>> Generating Position of each node...')
         if vis_type == 'PCA':
-            X = np.array(self.processor.data["BaggingVector"].to_list()).T
+            X = np.array(BaggingVector.to_list()).T
             pca = PCA(n_components=2)
             pca.fit(X)
             P = pca.transform(X).T
         elif vis_type == 'NMF':
             model = NMF(n_components=2, init='random', random_state=0)
-            X = self.processor.data["BaggingVector"].to_list()
+            X = BaggingVector.to_list()
             W = model.fit_transform(X)
             P = model.components_
         elif vis_type == 'tSNE':
-            X = np.array(self.processor.data["BaggingVector"].to_list()).T
+            X = np.array(BaggingVector.to_list()).T
             pca = PCA(n_components=int(X.shape[0]/20))
             pca.fit(X)
             P = pca.transform(X)
@@ -867,11 +898,65 @@ class PB_Data:
         fig.opts(width=1000, height=1000)
         return hv.render(fig)
     
-    
+    def generate_topic_model_table(self, word_scale=100, bridge=5, clusters=10, 
+                                   soft_clustering=True, limit=100, topic_dist_matrix=True,
+                                   keyword_dist_matrix=True):
+        from sklearn.decomposition import NMF
+        word_scale, bridge, clusters, limit = int(word_scale), int(bridge), int(clusters), int(limit)
+        print('\n>> Building Topic Model for Keywords')
+        model = NMF(n_components=bridge, init='random', random_state=0)
+        BaggingVector, sub_pos = self.processor.bag_of_word() # get word index and process doc vectors
+        X = BaggingVector.to_list()
+        W = model.fit_transform(X)
+        H = model.components_
+        self.data['Topic'] = pd.Series(np.argmin(W, axis=1))
+        print('\n>> Clustering Keywords')
+        if soft_clustering:
+            from sklearn.cluster import KMeans
+            k_means = KMeans(n_clusters=clusters, random_state=10)
+            k_means.fit(H.T)
+            word_topic = k_means.predict(H.T)
+        else:
+            word_topic = np.argmin(H, axis=0)
+        word_index = [i for i in sub_pos]
+        word_de = pd.DataFrame({'word':word_index, 'topic':word_topic})
+        word_de['H'] = word_de.index.map(lambda x: H.T[x])
+        word_set = self.processor.keywords.word.to_list()[0:word_scale]
+        word_de = word_de[word_de['word'].isin(word_set)]
+        topic_set = {i:[] for i in word_de.topic.unique().tolist()}
+        for index, row in word_de.iterrows():
+            topic_set[row['topic']].append(row['word'])
+        display = pd.DataFrame.from_dict(topic_set, orient='index').transpose().sort_index(axis=1).fillna('').head(limit)
+        print('\n>> Formatting Results')
+        output = display.style.set_caption('Keyword Topic Clustering').render()
+        if topic_dist_matrix:
+            if soft_clustering:
+                gd = get_distance(k_means.cluster_centers_)
+            else:
+                gd = get_distance(H)
+            stci = HStyler(gd)
+            output += stci.get_heatmap(sns.color_palette("BrBG", as_cmap=True), sub=(gd.index, gd.columns)).format('{:.2f}').set_caption('* Distance Matrix of Topic Clustering Centers').render()
+        if keyword_dist_matrix:
+            Hd = get_distance(word_de['H'].to_list())
+            Hd.index, Hd.columns = word_de['word'].to_list(), word_de['word'].to_list()
+            sthd = HStyler(Hd)
+            output += sthd.get_heatmap(sns.color_palette("BrBG", as_cmap=True), sub=(Hd.index, Hd.columns)).format('{:.2f}').set_caption('* Distance Matrix of Keywords').render()
+        return output
+            
     # tools ------------------------------------
-    def note(self, title, note):
-        note = '<div class="content-note">' + note + "</div>"
-        return title, note
+    def note(self, title, note, tools):
+        note = '<div class="content-note" contenteditable="true">' + note + "</div>"
+        return title, note, tools
+        
+        
+
+
+def get_distance(vectors):
+    dis_dict = {i:[] for i in range(len(vectors))}
+    for i in range(len(vectors)):
+        for j in range(len(vectors)):
+            dis_dict[i].append(np.linalg.norm(vectors[i] - vectors[j]))
+    return pd.DataFrame(dis_dict, columns=range(len(vectors)))
 
 
 def is_number(s):

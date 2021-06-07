@@ -3,6 +3,7 @@ import json
 import os
 import datetime
 import pickledb
+from urllib.parse import quote, unquote
 
 
 class USER:
@@ -17,6 +18,7 @@ class USER:
             self._generate_global_sending_id()
         else:
             self.get_user()
+            
             
     def _generate_user(self):
         mkdir(self.path)
@@ -62,6 +64,7 @@ class USER:
         self.dictionary = self.info['dictionary']
         self.mapping = self.info['mapping']
         self.settings = self.info['settings']
+        self.update_public(refresh=False)
         self.update_info_file()
         template_db = pickledb.load('static/user/public/template_view/template_view.db', False, sig=False)
         if template_db.db.get(self.username) is None:
@@ -73,7 +76,7 @@ class USER:
         file_list = file_name_listdir(current_path)
         for i in file_list:
             if i not in self.data:
-                self.data[i] = [current_path+i, get_now()]
+                self.data[i] = [quote(current_path+i), get_now()]
         current_path = self.path + 'dictionary/'
         file_list = file_name_listdir(current_path)
         for i in file_list:
@@ -84,6 +87,21 @@ class USER:
         for i in file_list:
             if i not in self.mapping:
                 self.mapping[i] = [current_path+i, get_now()]
+        pop_list = []
+        for check in self.data:
+            if not os.path.exists(unquote(self.data[check][0])):
+                pop_list.append(check)
+        [self.data.pop(i) for i in pop_list]
+        pop_list = []
+        for check in self.dictionary:
+            if not os.path.exists(self.dictionary[check][0]):
+                pop_list.append(check)
+        [self.dictionary.pop(i) for i in pop_list]
+        pop_list = []
+        for check in self.mapping:
+            if not os.path.exists(self.mapping[check][0]):
+                pop_list.append(check)
+        [self.mapping.pop(i) for i in pop_list]
         self.form_info()
 
     def update_public(self, refresh=False):
@@ -95,7 +113,7 @@ class USER:
         current_path = self.public_path + 'data/'
         file_list = file_name_listdir(current_path)
         for i in file_list:
-            self.data[i] = [current_path+i, get_now()]
+            self.data[i] = [quote(current_path+i), get_now()]
         current_path = self.public_path + 'dictionary/'
         file_list = file_name_listdir(current_path)
         for i in file_list:
@@ -223,3 +241,19 @@ def save_file(path, name, content, filetype='.json'):
         f = open(path+name, 'w')
         f.write(content)
         f.close()
+
+def getFileSize(filePath):
+
+    fsize = os.path.getsize(filePath)
+    if fsize < 1024:
+    	return f"{round(fsize,2)}Byte"
+    else: 
+    	KBX = fsize/1024
+    	if KBX < 1024:
+    		return f"{round(KBX,2)}K"
+    	else:
+    		MBX = KBX /1024
+    		if MBX < 1024:
+    			return f'{round(MBX,2)}M'
+    		else:
+    			return f'{round(MBX/1024)}G'

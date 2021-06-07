@@ -52,17 +52,17 @@ class Processor:
             mapped = 0
             for index in tqdm(range(len(self.data))):
                 if str(self.data.loc[index, "preferred_vendor"]).strip() in vendor_code_cleaned:
-                    self.data.loc[index, "vendor"] = vendor_code_cleaned[self.data.loc[index, "preferred_vendor"]]
+                    self.data.loc[index, "vendor"] = vendor_code_cleaned[str(self.data.loc[index, "preferred_vendor"]).strip()]
                     mapped += 1
                 elif str(self.data.loc[index, "primary_vendor"]).strip() in vendor_code_cleaned:
-                    self.data.loc[index, "vendor"] = vendor_code_cleaned[self.data.loc[index, "primary_vendor"]]
+                    self.data.loc[index, "vendor"] = vendor_code_cleaned[str(self.data.loc[index, "primary_vendor"]).strip()]
                     mapped += 1
                 elif str(self.data.loc[index, "preferred_vendor_name"]).replace(" ", "")[0:7] in vendor_code_10:
-                    code = vendor_code_10[self.data.loc[index, "preferred_vendor_name"].replace(" ", "")[0:7]]
+                    code = vendor_code_10[str(self.data.loc[index, "preferred_vendor_name"]).replace(" ", "")[0:7]]
                     self.data.loc[index, "vendor"] = vendor_code_cleaned[code]
                     mapped += 1
                 elif str(self.data.loc[index, "primary_vendor_name"]).replace(" ", "")[0:7] in vendor_code_10:
-                    code = vendor_code_10[self.data.loc[index, "primary_vendor_name"].replace(" ", "")[0:7]]
+                    code = vendor_code_10[str(self.data.loc[index, "primary_vendor_name"]).replace(" ", "")[0:7]]
                     self.data.loc[index, "vendor"] = vendor_code_cleaned[code]
                     mapped += 1
                 elif type(self.data.loc[index, "preferred_vendor_name"]) == str:
@@ -236,7 +236,7 @@ class Processor:
             return self.keywords.loc[0: k]['word'].to_list()
         else:
             return None
-    def co_occurence(self, scale = 500, clustering=False):
+    def co_occurence(self, scale = 500):
         co_dict = {}
         top_list = self.keywords['word'].to_list()[0:scale]
         print(">> Start Building Co-occurence Matrix...")
@@ -265,9 +265,6 @@ class Processor:
                 nodes.append([co[0], co_dict[co]])
             else:
                 edges.append([co[0], co[1], co_dict[co]])
-        if clustering:
-            print(">> Start Clustering...")
-            
         return nodes, edges
         
     def doc2vec(self):
@@ -297,8 +294,9 @@ class Processor:
             return v
         tqdm.pandas(desc="Processing")
         self.sub_pos = sub_pos
-        self.data["BaggingVector"] = self.data["Tokenize"].progress_apply(lambda x: d2v(x))
+        BaggingVector = self.data["Tokenize"].progress_apply(lambda x: d2v(x))
         print("\n>> Extracting Finished...")
+        return BaggingVector, sub_pos
         
 def is_number(s):
     try:

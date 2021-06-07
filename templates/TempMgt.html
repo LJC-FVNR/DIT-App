@@ -39,7 +39,7 @@
       </li>
       <li>
         <a href="#">
-          <span>Home</span>
+          <span>User</span>
         </a>
         <ul class="nav-left-container-small">
           <li style="list-style: none">
@@ -50,7 +50,7 @@
           <li style="list-style: none">
           </li>
           <li>
-            <a class="J_menuItem" href="#">My Templates</a>
+            <a class="J_menuItem" href="/panel/{{username}}/">My Panel</a>
           </li>
           <li style="list-style: none">
           </li>
@@ -69,8 +69,17 @@
                   <a href="{{url_for('use_view', username=username, template_name=tempname)}}" class="tm-tools text-info">View</a>
                   <a href="javascript:useModel('{{username}}', '{{tempname}}');" class="tm-tools text-info">Model</a>
                 </div>
+                
+                <div class="d-flex justify-content-between align-items-center w-100 temp-info">
+                <span class="d-block tm-times">creator: {{username}}</span>
+                <span class="d-block tm-times">block amount: {{temp_collection[tempname]['model']|length - 2}}</span>
+                <span class="d-block tm-times">data filename: {{temp_collection[tempname]['model']['data_name']}}</span>
+                <span class="d-block tm-times">data size: {{getFileSize(temp_collection[tempname]['model']['data_path'])}}</span>
+                
+                </div>
+                
                 <div class="d-flex justify-content-between align-items-center w-100">
-                    <span class="d-block tm-times mr-auto">{{temp_collection[tempname]['time']}}</span>
+                    <span class="d-block tm-times mr-auto">created time: {{temp_collection[tempname]['time']}}</span>
                     <a href="#" role="button" data-toggle="modal" data-target="#rename{{loop.index}}" class="tm-tools text-info">Rename</a>
                     <a href="#" role="button" data-toggle="modal" data-target="#delete{{loop.index}}" class="tm-tools text-info">Delete</a>
                 </div>
@@ -186,6 +195,8 @@
                 }
             var start_getting = $.ajax(get_status);
         }
+        
+        
     </script>
 </body>
 
